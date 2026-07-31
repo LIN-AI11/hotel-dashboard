@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="v20260728-01">
-<title>酒店经营分析看板 v20260728-01</title>
+<meta name="build-version" content="v20260731-01">>
+<title>酒店经营分析看板 v20260731-01（修复版·基于稳定版v20260728-01）</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1313,6 +1313,7 @@ html { scroll-behavior: smooth; }
 #fbpg-kitchen .up-note{color:var(--text-secondary);font-weight:400}
 
 </style>
+<!-- 修复版 v20260731-01：基于稳定版 v20260728-01 恢复。原因：同事版 v20260729-21 在反复回退中丢失 43 个渲染/数据函数（约9.2万字符），导致图表空白+TAB失效。此版完整保留稳定版全部功能。同事本轮优化需求见《合并修改说明.md》第三节，待后续实现。 -->
 </head>
 <body>
 <div class="loading-mask" id="loadingMask">
