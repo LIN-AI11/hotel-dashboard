@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="v20260731-09">>
-<title>酒店经营分析看板 v20260731-09（修复版·基于稳定版v20260728-01）</title>
+<meta name="build-version" content="v20260801-01">>
+<title>酒店经营分析看板 v20260801-01（修复版·基于稳定版v20260728-01）</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1319,7 +1319,7 @@ html { scroll-behavior: smooth; }
 #fbpg-kitchen .up-note{color:var(--text-secondary);font-weight:400}
 
 </style>
-<!-- 修复版 v20260731-09：基于稳定版 v20260728-01 恢复。原因：同事版 v20260729-21 在反复回退中丢失 43 个渲染/数据函数（约9.2万字符），导致图表空白+TAB失效。此版完整保留稳定版全部功能。同事本轮优化需求见《合并修改说明.md》第三节，待后续实现。 -->
+<!-- 修复版 v20260801-01：基于稳定版 v20260728-01 恢复。原因：同事版 v20260729-21 在反复回退中丢失 43 个渲染/数据函数（约9.2万字符），导致图表空白+TAB失效。此版完整保留稳定版全部功能。同事本轮优化需求见《合并修改说明.md》第三节，待后续实现。 -->
 </head>
 <body>
 <div class="loading-mask" id="loadingMask">
@@ -1334,7 +1334,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260731-09</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260801-01</span>
     </div>
     <div class="header-actions">
     </div>
@@ -5535,7 +5535,7 @@ function getRoomMaintenance(yr, mo, code) {
 }
 
 
-// v20260731-09: 从 JY03 完整记录读取指定字段
+// v20260801-01: 从 JY03 完整记录读取指定字段
 function getJy03FullField(yr, mo, field) {
   yr=String(yr).replace('年','').trim(); mo=parseInt(mo,10);
   var obj=getJy03FullObj();
@@ -5543,7 +5543,7 @@ function getJy03FullField(yr, mo, field) {
   return obj[yr][mo][field];
 }
 
-// v20260731-09: 酒店客房营收（不含早）= JY03 门店收入 - 餐厅营收 - 餐饮 - 早餐划拨
+// v20260801-01: 酒店客房营收（不含早）= JY03 门店收入 - 餐厅营收 - 餐饮 - 早餐划拨
 function getRoomRevenue(yr, mo) {
   yr=String(yr).replace('年','').trim(); mo=parseInt(mo,10);
   var rev=getJy03Revenue(yr,mo);
@@ -5560,7 +5560,7 @@ function getRoomRevenue(yr, mo) {
   return rev;
 }
 
-// v20260731-09: 从 JY03 完整记录读取 出租率（扣维修房），已存储为百分比（如 65 表示 65%），返回小数
+// v20260801-01: 从 JY03 完整记录读取 出租率（扣维修房），已存储为百分比（如 65 表示 65%），返回小数
 function getJy03OccRate(yr, mo) {
   yr=String(yr).replace('年','').trim(); mo=parseInt(mo,10);
   var val=getJy03FullField(yr,mo,'出租率（扣维修房）');
@@ -5576,14 +5576,14 @@ function roomWithJy03Metrics(m) {
   var legacyDenom = ((D.meta && D.meta.total_rooms) || 166) * (m.days || 0);
   var jy03Rooms = getJy03Rooms(m.year, m.month);             // JY03 客房数（可用房间夜数）
   var denom = (jy03Rooms && jy03Rooms > 0) ? jy03Rooms : legacyDenom;
-  // v20260731-09: OCC 直接从 JY03「出租率（扣维修房）」读取
+  // v20260801-01: OCC 直接从 JY03「出租率（扣维修房）」读取
   var jy03Occ = getJy03OccRate(m.year, m.month);
   var occ = (jy03Occ != null) ? jy03Occ : (denom > 0 ? effNights / denom : (m.avg_occ || 0));
-  // v20260731-09: 客房营收 = JY03 门店收入 - 餐厅营收 - 餐饮 - 早餐划拨
+  // v20260801-01: 客房营收 = JY03 门店收入 - 餐厅营收 - 餐饮 - 早餐划拨
   var roomRev = getRoomRevenue(m.year, m.month);
-  // v20260731-09: ADR = 客房营收 / 间夜数
+  // v20260801-01: ADR = 客房营收 / 间夜数
   var adr = effNights > 0 ? roomRev / effNights : (m.avg_adr || 0);
-  // v20260731-09: RevPAR = OCC × ADR
+  // v20260801-01: RevPAR = OCC × ADR
   var revpar = occ * adr;
   return Object.assign({}, m, { jy03: effNights, eff_nights: effNights, jy03Rooms: jy03Rooms, avg_occ: occ, avg_adr: adr, avg_revpar: revpar, revenue: roomRev });
 }
