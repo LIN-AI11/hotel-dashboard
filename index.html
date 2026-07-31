@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="v20260731-06">>
-<title>酒店经营分析看板 v20260731-06（修复版·基于稳定版v20260728-01）</title>
+<meta name="build-version" content="v20260731-07">>
+<title>酒店经营分析看板 v20260731-07（修复版·基于稳定版v20260728-01）</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1313,7 +1313,7 @@ html { scroll-behavior: smooth; }
 #fbpg-kitchen .up-note{color:var(--text-secondary);font-weight:400}
 
 </style>
-<!-- 修复版 v20260731-06：基于稳定版 v20260728-01 恢复。原因：同事版 v20260729-21 在反复回退中丢失 43 个渲染/数据函数（约9.2万字符），导致图表空白+TAB失效。此版完整保留稳定版全部功能。同事本轮优化需求见《合并修改说明.md》第三节，待后续实现。 -->
+<!-- 修复版 v20260731-07：基于稳定版 v20260728-01 恢复。原因：同事版 v20260729-21 在反复回退中丢失 43 个渲染/数据函数（约9.2万字符），导致图表空白+TAB失效。此版完整保留稳定版全部功能。同事本轮优化需求见《合并修改说明.md》第三节，待后续实现。 -->
 </head>
 <body>
 <div class="loading-mask" id="loadingMask">
@@ -1328,7 +1328,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260731-06</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260731-07</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1393,17 +1393,7 @@ html { scroll-behavior: smooth; }
 <!-- TAB: Overview -->
 <div class="tab-panel active" id="tab-overview">
   <div class="overview-summary" id="overviewSummary"></div>
-  <div class="chart-grid cols-1">
-    <div class="chart-card">
-      <div class="chart-title">
-        <span>部门目标 VS 部门实际 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">月度</span></span>
-        <span id="revTargetCatSelector" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;"></span>
-      </div>
-      <div class="chart-canvas-wrap short" style="margin-bottom:6px;"><canvas id="chartRevRate"></canvas></div>
-      <div class="chart-canvas-wrap"><canvas id="chartRevTarget"></canvas></div>
-      <div id="revTargetLegend" style="display:flex;justify-content:center;gap:20px;padding:8px 0 0;"></div>
-    </div>
-    <div class="chart-card">
+<div class="chart-grid cols-1"><div class="chart-card">
       <div class="chart-title">
         <span>全年总营收趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">按年分线</span></span>
       </div>
@@ -1423,6 +1413,17 @@ html { scroll-behavior: smooth; }
         <span>环比趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">较上月</span></span>
       </div>
       <div class="chart-canvas-wrap"><canvas id="chartMoM"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-grid cols-1">
+    <div class="chart-card">
+      <div class="chart-title">
+        <span>部门目标 VS 部门实际 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">月度</span></span>
+        <span id="revTargetCatSelector" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;"></span>
+      </div>
+      <div class="chart-canvas-wrap short" style="margin-bottom:6px;"><canvas id="chartRevRate"></canvas></div>
+      <div class="chart-canvas-wrap"><canvas id="chartRevTarget"></canvas></div>
+      <div id="revTargetLegend" style="display:flex;justify-content:center;gap:20px;padding:8px 0 0;"></div>
     </div>
   </div>
   <div class="chart-grid cols-2" style="display:none">
@@ -3993,7 +3994,7 @@ function renderYearlyTotalRevChart() {
         // 图例默认可点击隐藏/显示各年份线条
         plugins: {
           legend: { position: 'bottom' },
-          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return '¥' + fmt(v,2); }, color: '#333', font: { size: 10 } },
+          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return '¥' + fmt(v,2); }, color: function(ctx) { return ctx.dataset.borderColor; }, font: { size: 10 }, offset: 4, clamp: true },
           tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + '：¥' + fmt(ctx.parsed.y,2); } } }
         }
       }
@@ -4174,45 +4175,38 @@ function renderOverview() {
 
   document.getElementById('overviewSummary').innerHTML = `
     <div class="os-grid">
-      <div class="os-left">
-        <div class="os-block">
-          <div class="os-section-label">年累计（${overviewYear}年 1-${latestMonth > 0 ? latestMonth : '-'}月）</div>
-          <div class="os-row"><span class="os-metric-label">年累计目标</span><span class="os-metric-value" style="color:var(--primary)">¥${fmt(cumTargetComplete,2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">年累计完成</span><span class="os-metric-value">¥${fmt(cumActualComplete,2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">年累计差额</span><span class="os-metric-value" style="color:${cumDiffComplete >= 0 ? 'var(--success)' : 'var(--danger)'}">${cumDiffComplete >= 0 ? '+' : '-'}¥${fmt(Math.abs(cumDiffComplete),2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">年目标完成率</span><span class="os-metric-value" style="color:${cumRateComplete >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRateComplete)}</span></div>
+      <div class="os-block">
+        <div class="os-section-label">年累计（${overviewYear}年 1-${latestMonth > 0 ? latestMonth : '-'}月）</div>
+        <div class="os-row"><span class="os-metric-label">年累计目标</span><span class="os-metric-value" style="color:var(--primary)">¥${fmt(cumTargetComplete,2)}</span></div>
+        <div class="os-row"><span class="os-metric-label">年累计完成</span><span class="os-metric-value">¥${fmt(cumActualComplete,2)}</span></div>
+        <div class="os-row"><span class="os-metric-label">年累计差额</span><span class="os-metric-value" style="color:${cumDiffComplete >= 0 ? 'var(--success)' : 'var(--danger)'}">${cumDiffComplete >= 0 ? '+' : '-'}¥${fmt(Math.abs(cumDiffComplete),2)}</span></div>
+        <div class="os-donut" style="margin-top:10px;">
+          <div class="os-donut-canvas"><canvas id="chartOverviewSummary"></canvas></div>
+          <div class="os-donut-center"><div class="os-donut-pct" style="color:${cumRateComplete >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRateComplete)}</div><div class="os-donut-cap">年完成率</div></div>
         </div>
-        <div class="os-block">
-          <div class="os-section-label">上月（${latestMonthLabel}）</div>
-          <div class="os-row"><span class="os-metric-label">上月目标</span><span class="os-metric-value">¥${fmt(lastMonthTarget,2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">上月营收</span><span class="os-metric-value">¥${fmt(latestMonthRev,2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">上月差额</span><span class="os-metric-value" style="color:${lastMonthDiff >= 0 ? 'var(--success)' : 'var(--danger)'}">${lastMonthDiff >= 0 ? '+' : '-'}¥${fmt(Math.abs(lastMonthDiff),2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">上月完成率</span><span class="os-metric-value" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</span></div>
+      </div>
+      <div class="os-block">
+        <div class="os-section-label">上月（${latestMonthLabel}）</div>
+        <div class="os-row"><span class="os-metric-label">上月目标</span><span class="os-metric-value">¥${fmt(lastMonthTarget,2)}</span></div>
+        <div class="os-row"><span class="os-metric-label">上月营收</span><span class="os-metric-value">¥${fmt(latestMonthRev,2)}</span></div>
+        <div class="os-row"><span class="os-metric-label">上月差额</span><span class="os-metric-value" style="color:${lastMonthDiff >= 0 ? 'var(--success)' : 'var(--danger)'}">${lastMonthDiff >= 0 ? '+' : '-'}¥${fmt(Math.abs(lastMonthDiff),2)}</span></div>
+        <div class="os-donut" style="margin-top:10px;">
+          <div class="os-donut-canvas"><canvas id="chartOverviewMonth"></canvas></div>
+          <div class="os-donut-center"><div class="os-donut-pct" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</div><div class="os-donut-cap">月完成率</div></div>
         </div>
-        <div class="os-block">
-          <div class="os-section-label">下月预测（${nextMonthLabelStr}）</div>
-          <div class="os-row"><span class="os-metric-label">下月目标</span><span class="os-metric-value">¥${fmt(nextMonthTarget,2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">日均目标</span><span class="os-metric-value">¥${fmt(dailyTarget, 0)}</span></div>
-          <div class="os-row"><span class="os-metric-label">缺口+下月目标</span><span class="os-metric-value" style="color:#e65100;">¥${fmt(gapCardVal,2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">每日需完成</span><span class="os-metric-value" style="color:var(--danger);">¥${fmt(dailyCatchup, 0)}</span></div>
-        </div>
-        <div class="os-block">
+      </div>
+      <div class="os-block">
+        <div class="os-section-label">下月预测（${nextMonthLabelStr}）</div>
+        <div class="os-row"><span class="os-metric-label">下月目标</span><span class="os-metric-value">¥${fmt(nextMonthTarget,2)}</span></div>
+        <div class="os-row"><span class="os-metric-label">日均目标</span><span class="os-metric-value">¥${fmt(dailyTarget, 0)}</span></div>
+        <div class="os-row"><span class="os-metric-label">缺口+下月目标</span><span class="os-metric-value" style="color:#e65100;">¥${fmt(gapCardVal,2)}</span></div>
+        <div class="os-row"><span class="os-metric-label">每日需完成</span><span class="os-metric-value" style="color:var(--danger);">¥${fmt(dailyCatchup, 0)}</span></div>
+        <div style="margin-top:10px;">
           <div class="os-section-label">年累计（更新到日）</div>
           <div class="os-row" style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">数据截至 ${latestDataDateLabel}</div>
           <div class="os-row"><span class="os-metric-label">年累计目标（1-${maxDataMonth > 0 ? maxDataMonth : '-'}月）</span><span class="os-metric-value" style="color:var(--primary)">¥${fmt(cumTarget,2)}</span></div>
           <div class="os-row"><span class="os-metric-label">年累计完成</span><span class="os-metric-value">¥${fmt(totalRev,2)}</span></div>
           <div class="os-row"><span class="os-metric-label">年累计差额</span><span class="os-metric-value" style="color:${cumDiff >= 0 ? 'var(--success)' : 'var(--danger)'}">${cumDiff >= 0 ? '+' : '-'}¥${fmt(Math.abs(cumDiff),2)}</span></div>
-          <div class="os-row"><span class="os-metric-label">年目标完成率</span><span class="os-metric-value" style="color:${cumRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRate)}</span></div>
-        </div>
-      </div>
-      <div class="os-right">
-        <div class="os-donut">
-          <div class="os-donut-canvas"><canvas id="chartOverviewSummary"></canvas></div>
-          <div class="os-donut-center"><div class="os-donut-pct" style="color:${cumRateComplete >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRateComplete)}</div><div class="os-donut-cap">年完成率</div></div>
-        </div>
-        <div class="os-donut">
-          <div class="os-donut-canvas"><canvas id="chartOverviewMonth"></canvas></div>
-          <div class="os-donut-center"><div class="os-donut-pct" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</div><div class="os-donut-cap">月完成率</div></div>
         </div>
       </div>
     </div>
@@ -5014,6 +5008,7 @@ function renderRevTargetChart() {
       },
       plugins: {
         legend: { display: false },
+        datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return '¥' + fmt(v,2); }, color: '#333', font: { size: 10 } },
         nestedTarget: {
           targetValues: displayTarget,
           borderColor: '#ff6d00',
@@ -5311,6 +5306,7 @@ function renderYoYChart() {
         },
         plugins: {
           legend: { display: false },
+          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return v.toFixed(1) + '%'; }, color: '#333', font: { size: 10 } },
           tooltip: {
             callbacks: {
               label: function(ctx) {
@@ -5437,7 +5433,7 @@ function renderMoMChart() {
         },
         plugins: {
           legend: { display: true, position: 'bottom' },
-          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return v != null ? v.toFixed(1) + '%' : ''; }, color: '#333', font: { size: 10 } },
+          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return v != null ? v.toFixed(1) + '%' : ''; }, color: function(ctx) { return ctx.dataset.borderColor; }, font: { size: 10 }, offset: 4, clamp: true },
           tooltip: {
             callbacks: {
               label: function(ctx) {
