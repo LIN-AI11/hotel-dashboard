@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="v20260801-03">>
-<title>酒店经营分析看板 v20260801-03（修复版·基于稳定版v20260728-01）</title>
+<meta name="build-version" content="v20260801-09">
+<title>酒店经营分析看板 v20260801-09</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -386,12 +386,9 @@ body {
 }
 .os-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 32px;
-  align-items: start;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
+  grid-template-columns: 1fr minmax(620px, 1fr);
+  gap: 28px;
+  align-items: stretch;
 }
 .os-left {
   display: flex;
@@ -401,10 +398,7 @@ body {
   margin: 0 auto;
 }
 .os-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+  display: block;
 }
 .os-section-label {
   display: inline-block;
@@ -1319,7 +1313,6 @@ html { scroll-behavior: smooth; }
 #fbpg-kitchen .up-note{color:var(--text-secondary);font-weight:400}
 
 </style>
-<!-- 修复版 v20260801-03：基于稳定版 v20260728-01 恢复。原因：同事版 v20260729-21 在反复回退中丢失 43 个渲染/数据函数（约9.2万字符），导致图表空白+TAB失效。此版完整保留稳定版全部功能。同事本轮优化需求见《合并修改说明.md》第三节，待后续实现。 -->
 </head>
 <body>
 <div class="loading-mask" id="loadingMask">
@@ -1334,7 +1327,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260801-03</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260801-09</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1399,7 +1392,17 @@ html { scroll-behavior: smooth; }
 <!-- TAB: Overview -->
 <div class="tab-panel active" id="tab-overview">
   <div class="overview-summary" id="overviewSummary"></div>
-<div class="chart-grid cols-1"><div class="chart-card">
+  <div class="chart-grid cols-1">
+    <div class="chart-card">
+      <div class="chart-title">
+        <span>部门目标 VS 部门实际 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">月度</span></span>
+        <span id="revTargetCatSelector" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;"></span>
+      </div>
+      <div class="chart-canvas-wrap short" style="margin-bottom:6px;"><canvas id="chartRevRate"></canvas></div>
+      <div class="chart-canvas-wrap"><canvas id="chartRevTarget"></canvas></div>
+      <div id="revTargetLegend" style="display:flex;justify-content:center;gap:20px;padding:8px 0 0;"></div>
+    </div>
+    <div class="chart-card">
       <div class="chart-title">
         <span>全年总营收趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">按年分线</span></span>
       </div>
@@ -1419,17 +1422,6 @@ html { scroll-behavior: smooth; }
         <span>环比趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">较上月</span></span>
       </div>
       <div class="chart-canvas-wrap"><canvas id="chartMoM"></canvas></div>
-    </div>
-  </div>
-  <div class="chart-grid cols-1">
-    <div class="chart-card">
-      <div class="chart-title">
-        <span>部门目标 VS 部门实际 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">月度</span></span>
-        <span id="revTargetCatSelector" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;"></span>
-      </div>
-      <div class="chart-canvas-wrap short" style="margin-bottom:6px;"><canvas id="chartRevRate"></canvas></div>
-      <div class="chart-canvas-wrap"><canvas id="chartRevTarget"></canvas></div>
-      <div id="revTargetLegend" style="display:flex;justify-content:center;gap:20px;padding:8px 0 0;"></div>
     </div>
   </div>
   <div class="chart-grid cols-2" style="display:none">
@@ -1667,7 +1659,7 @@ html { scroll-behavior: smooth; }
     <div class="kpi-grid" id="rmTgtK"></div>
     <div class="chart-grid">
       <div class="chart-card">
-        <div class="chart-title">酒店客房目标完成 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">含早</span></div>
+        <div class="chart-title">酒店客房目标完成 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">客房</span></div>
         <div class="chart-canvas-wrap" style="height:180px;margin-bottom:6px;"><canvas id="rmTgt1Rate"></canvas></div>
         <div class="chart-canvas-wrap"><canvas id="rmTgt1"></canvas></div>
         <div id="rmTgt1Legend" style="display:flex;justify-content:center;gap:20px;padding:8px 0 0;"></div>
@@ -1675,11 +1667,14 @@ html { scroll-behavior: smooth; }
     </div>
     <div class="chart-grid">
       <div class="chart-card">
-        <div class="chart-title">酒店客房目标 VS 实际 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">含早</span></div>
-        <div class="chart-canvas-wrap"><canvas id="rmTgtBar"></canvas></div>
+        <div class="chart-title">部门目标完成 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">客房部门</span></div>
+        <div class="chart-canvas-wrap" style="height:180px;margin-bottom:6px;"><canvas id="rmTgt2Rate"></canvas></div>
+        <div class="chart-canvas-wrap"><canvas id="rmTgt2"></canvas></div>
+        <div id="rmTgt2Legend" style="display:flex;justify-content:center;gap:20px;padding:8px 0 0;"></div>
       </div>
     </div>
     <div class="data-table-wrap"><div class="chart-title">酒店客房目标明细</div><div id="rmTgtTbl1"></div></div>
+    <div class="data-table-wrap"><div class="chart-title">部门目标明细</div><div id="rmTgtTbl2"></div></div>
   </div>
 </div>
 
@@ -2218,11 +2213,32 @@ function applyChartDefaults() {
   Chart.defaults.scale.ticks.maxRotation = 45;
   // 图例（可点击隐藏/显示对应系列）
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
-  Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
-  Chart.defaults.plugins.legend.labels.boxWidth = 8;
+  Chart.defaults.plugins.legend.labels.pointStyle = 'rectRounded';
+  Chart.defaults.plugins.legend.labels.boxWidth = 16;
+  Chart.defaults.plugins.legend.labels.boxHeight = 12;
   Chart.defaults.plugins.legend.labels.padding = 14;
   Chart.defaults.plugins.legend.labels.color = '#475569';
   Chart.defaults.plugins.legend.labels.font = { size: 12, weight: '500', family: Chart.defaults.font.family };
+  // 图例色块颜色：折线图取 borderColor，柱状图取 backgroundColor
+  var _origGenerateLabels = Chart.defaults.plugins.legend.labels.generateLabels;
+  Chart.defaults.plugins.legend.labels.generateLabels = function(chart) {
+    var items = _origGenerateLabels.call ? _origGenerateLabels.call(this, chart) : _origGenerateLabels(chart);
+    if (!items) return [];
+    items.forEach(function(item) {
+      var ds = chart.data.datasets[item.datasetIndex];
+      if (!ds) return;
+      // 颜色可能是数组（如同比图每根柱子不同色），取第一个作为图例色
+      var getFirst = function(v) { return Array.isArray(v) ? v[0] : v; };
+      if (chart.config.type === 'line') {
+        item.fillStyle = getFirst(ds.borderColor) || item.strokeStyle;
+      } else if (chart.config.type === 'bar') {
+        var c = getFirst(ds.backgroundColor);
+        item.fillStyle = c;
+        item.strokeStyle = c ? String(c) : String(getFirst(ds.borderColor) || '');
+      }
+    });
+    return items;
+  };
   // 悬停提示（高对比暗色背景，保证可读性；圆角、留白舒适）
   Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15,23,42,0.92)';
   Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
@@ -2253,12 +2269,20 @@ function applyChartDefaults() {
   // 注册并配置数据标签插件：柱/折/点默认在顶端显示数值，自动隐藏重叠标签
   if (window.ChartDataLabels) {
     Chart.register(ChartDataLabels);
-    // 默认全局关闭数据标签；仅特定图表（如房型间夜数同期对比）在各自 options 中显式开启
-    Chart.defaults.plugins.datalabels.display = false;
+    // 默认全局启用数据标签；饼图等不适合的图表在各自 options 中显式关闭
+    Chart.defaults.plugins.datalabels.display = true;
     Chart.defaults.plugins.datalabels.align = 'end';
     Chart.defaults.plugins.datalabels.anchor = 'end';
     Chart.defaults.plugins.datalabels.offset = 2;
-    Chart.defaults.plugins.datalabels.color = '#334155';
+    Chart.defaults.plugins.datalabels.color = function(ctx) {
+      // 数据标签颜色跟随所属系列：折线/柱状 → borderColor / backgroundColor
+      var ds = ctx && ctx.dataset;
+      if (!ds) return '#334155';
+      var c = chartType => chartType === 'line' ? ds.borderColor : ds.backgroundColor;
+      var color = c(ctx.chart && ctx.chart.config && ctx.chart.config.type);
+      if (Array.isArray(color)) color = color[ctx.dataIndex] || color[0];
+      return color || '#334155';
+    };
     Chart.defaults.plugins.datalabels.font = { size: 10, weight: '500', family: Chart.defaults.font.family };
     Chart.defaults.plugins.datalabels.formatter = function(value, ctx) {
       if (value == null) return '';
@@ -2269,9 +2293,22 @@ function applyChartDefaults() {
         var arr = ctx.dataset.data;
         var total = arr.reduce(function(a, b){ return a + (Number(b) || 0); }, 0);
         var pct = total > 0 ? (Number(n) / total * 100) : 0;
-        return (pct >= 10 ? pct.toFixed(0) : pct.toFixed(1)) + '%';
+        return pct.toFixed(1) + '%';
       }
-      return Number(n).toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+      // 线/柱图：Y 轴标题含 % / 率 / 增长 → 视为百分比，统一一位小数 + %
+      if (ctx && ctx.chart && ctx.chart.options && ctx.chart.options.scales) {
+        var scales = ctx.chart.options.scales;
+        var yLabel = '';
+        try {
+          var yScale = scales.y || scales.Y || (scales.left && scales.left.axis === 'y' ? scales.left : null);
+          if (yScale && yScale.title && yScale.title.text) yLabel = yScale.title.text;
+          else if (yScale && yScale.options && yScale.options.title && yScale.options.title.text) yLabel = yScale.options.title.text;
+        } catch (e) {}
+        if (yLabel && (yLabel.indexOf('%') >= 0 || yLabel.indexOf('率') >= 0 || yLabel.indexOf('增长') >= 0 || yLabel.indexOf('占比') >= 0)) {
+          return Number(n).toFixed(1) + '%';
+        }
+      }
+      return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
   }
   // 绑定响应式字号缩放（视口变化时自动重排所有图表）
@@ -4000,7 +4037,6 @@ function renderYearlyTotalRevChart() {
         // 图例默认可点击隐藏/显示各年份线条
         plugins: {
           legend: { position: 'bottom' },
-          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return '¥' + fmt(v,2); }, color: function(ctx) { return ctx.dataset.borderColor; }, font: { size: 10 }, offset: 4, clamp: true },
           tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + '：¥' + fmt(ctx.parsed.y,2); } } }
         }
       }
@@ -4181,38 +4217,45 @@ function renderOverview() {
 
   document.getElementById('overviewSummary').innerHTML = `
     <div class="os-grid">
-      <div class="os-block">
-        <div class="os-section-label">年累计（${overviewYear}年 1-${latestMonth > 0 ? latestMonth : '-'}月）</div>
-        <div class="os-row"><span class="os-metric-label">年累计目标</span><span class="os-metric-value" style="color:var(--primary)">¥${fmt(cumTargetComplete,2)}</span></div>
-        <div class="os-row"><span class="os-metric-label">年累计完成</span><span class="os-metric-value">¥${fmt(cumActualComplete,2)}</span></div>
-        <div class="os-row"><span class="os-metric-label">年累计差额</span><span class="os-metric-value" style="color:${cumDiffComplete >= 0 ? 'var(--success)' : 'var(--danger)'}">${cumDiffComplete >= 0 ? '+' : '-'}¥${fmt(Math.abs(cumDiffComplete),2)}</span></div>
-        <div class="os-donut" style="margin-top:10px;">
-          <div class="os-donut-canvas"><canvas id="chartOverviewSummary"></canvas></div>
-          <div class="os-donut-center"><div class="os-donut-pct" style="color:${cumRateComplete >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRateComplete)}</div><div class="os-donut-cap">年完成率</div></div>
+      <div class="os-left">
+        <div class="os-block">
+          <div class="os-section-label">年累计（${overviewYear}年 1-${latestMonth > 0 ? latestMonth : '-'}月）</div>
+          <div class="os-row"><span class="os-metric-label">年累计目标</span><span class="os-metric-value" style="color:var(--primary)">¥${fmt(cumTargetComplete,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">年累计完成</span><span class="os-metric-value">¥${fmt(cumActualComplete,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">年累计差额</span><span class="os-metric-value" style="color:${cumDiffComplete >= 0 ? 'var(--success)' : 'var(--danger)'}">${cumDiffComplete >= 0 ? '+' : '-'}¥${fmt(Math.abs(cumDiffComplete),2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">年目标完成率</span><span class="os-metric-value" style="color:${cumRateComplete >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRateComplete)}</span></div>
         </div>
-      </div>
-      <div class="os-block">
-        <div class="os-section-label">上月（${latestMonthLabel}）</div>
-        <div class="os-row"><span class="os-metric-label">上月目标</span><span class="os-metric-value">¥${fmt(lastMonthTarget,2)}</span></div>
-        <div class="os-row"><span class="os-metric-label">上月营收</span><span class="os-metric-value">¥${fmt(latestMonthRev,2)}</span></div>
-        <div class="os-row"><span class="os-metric-label">上月差额</span><span class="os-metric-value" style="color:${lastMonthDiff >= 0 ? 'var(--success)' : 'var(--danger)'}">${lastMonthDiff >= 0 ? '+' : '-'}¥${fmt(Math.abs(lastMonthDiff),2)}</span></div>
-        <div class="os-donut" style="margin-top:10px;">
-          <div class="os-donut-canvas"><canvas id="chartOverviewMonth"></canvas></div>
-          <div class="os-donut-center"><div class="os-donut-pct" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</div><div class="os-donut-cap">月完成率</div></div>
+        <div class="os-block">
+          <div class="os-section-label">上月（${latestMonthLabel}）</div>
+          <div class="os-row"><span class="os-metric-label">上月目标</span><span class="os-metric-value">¥${fmt(lastMonthTarget,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">上月营收</span><span class="os-metric-value">¥${fmt(latestMonthRev,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">上月差额</span><span class="os-metric-value" style="color:${lastMonthDiff >= 0 ? 'var(--success)' : 'var(--danger)'}">${lastMonthDiff >= 0 ? '+' : '-'}¥${fmt(Math.abs(lastMonthDiff),2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">上月完成率</span><span class="os-metric-value" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</span></div>
         </div>
-      </div>
-      <div class="os-block">
-        <div class="os-section-label">下月预测（${nextMonthLabelStr}）</div>
-        <div class="os-row"><span class="os-metric-label">下月目标</span><span class="os-metric-value">¥${fmt(nextMonthTarget,2)}</span></div>
-        <div class="os-row"><span class="os-metric-label">日均目标</span><span class="os-metric-value">¥${fmt(dailyTarget, 0)}</span></div>
-        <div class="os-row"><span class="os-metric-label">缺口+下月目标</span><span class="os-metric-value" style="color:#e65100;">¥${fmt(gapCardVal,2)}</span></div>
-        <div class="os-row"><span class="os-metric-label">每日需完成</span><span class="os-metric-value" style="color:var(--danger);">¥${fmt(dailyCatchup, 0)}</span></div>
-        <div style="margin-top:10px;">
+        <div class="os-block">
+          <div class="os-section-label">下月预测（${nextMonthLabelStr}）</div>
+          <div class="os-row"><span class="os-metric-label">下月目标</span><span class="os-metric-value">¥${fmt(nextMonthTarget,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">日均目标</span><span class="os-metric-value">¥${fmt(dailyTarget, 0)}</span></div>
+          <div class="os-row"><span class="os-metric-label">缺口+下月目标</span><span class="os-metric-value" style="color:#e65100;">¥${fmt(gapCardVal,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">每日需完成</span><span class="os-metric-value" style="color:var(--danger);">¥${fmt(dailyCatchup, 0)}</span></div>
+        </div>
+        <div class="os-block">
           <div class="os-section-label">年累计（更新到日）</div>
           <div class="os-row" style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">数据截至 ${latestDataDateLabel}</div>
           <div class="os-row"><span class="os-metric-label">年累计目标（1-${maxDataMonth > 0 ? maxDataMonth : '-'}月）</span><span class="os-metric-value" style="color:var(--primary)">¥${fmt(cumTarget,2)}</span></div>
           <div class="os-row"><span class="os-metric-label">年累计完成</span><span class="os-metric-value">¥${fmt(totalRev,2)}</span></div>
           <div class="os-row"><span class="os-metric-label">年累计差额</span><span class="os-metric-value" style="color:${cumDiff >= 0 ? 'var(--success)' : 'var(--danger)'}">${cumDiff >= 0 ? '+' : '-'}¥${fmt(Math.abs(cumDiff),2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">年目标完成率</span><span class="os-metric-value" style="color:${cumRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRate)}</span></div>
+        </div>
+      </div>
+      <div class="os-right">
+        <div class="os-donut">
+          <div class="os-donut-canvas"><canvas id="chartOverviewSummary"></canvas></div>
+          <div class="os-donut-center"><div class="os-donut-pct" style="color:${cumRateComplete >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(cumRateComplete)}</div><div class="os-donut-cap">年完成率</div></div>
+        </div>
+        <div class="os-donut">
+          <div class="os-donut-canvas"><canvas id="chartOverviewMonth"></canvas></div>
+          <div class="os-donut-center"><div class="os-donut-pct" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</div><div class="os-donut-cap">月完成率</div></div>
         </div>
       </div>
     </div>
@@ -4718,7 +4761,7 @@ function renderRevTargetChart() {
         const pct = grandTotal > 0 ? (val / grandTotal * 100) : 0;
         if (pct < minPct) return null;
         const label = String(chart.data.labels[i] || '');
-        const text = label + ' ' + pct.toFixed(0) + '%';
+        const text = label + ' ' + pct.toFixed(1) + '%';
         const midAngle = (arc.startAngle + arc.endAngle) / 2;
         const cos = Math.cos(midAngle);
         const sin = Math.sin(midAngle);
@@ -5014,7 +5057,6 @@ function renderRevTargetChart() {
       },
       plugins: {
         legend: { display: false },
-        datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return '¥' + fmt(v,2); }, color: '#333', font: { size: 10 } },
         nestedTarget: {
           targetValues: displayTarget,
           borderColor: '#ff6d00',
@@ -5069,14 +5111,13 @@ function renderRevTargetChart() {
           min: 0,
           max: y1Max,
           title: { display: true, text: '达成率' },
-          ticks: { callback: v => v.toFixed(0) + '%' },
+          ticks: { callback: v => v.toFixed(1) + '%' },
           grid: { drawOnChartArea: true },
           afterFit: function(scale) { scale.width = 90; }
         }
       },
       plugins: {
         legend: { display: false },
-        datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return v != null ? v.toFixed(1) + '%' : ''; }, color: '#333', font: { size: 10 } },
         tooltip: {
           callbacks: {
             label: function(context) {
@@ -5186,7 +5227,7 @@ function getMonthlyActual(year, month, metric) {
       case 'ota': return otaActual;
       default: {
         // v20260725-19：总营收仅使用 JY03 门店收入口径，缺失抛异常（部门筛选分支不受影响）
-        return getJy03Revenue(y, month);
+        try { return getJy03Revenue(y, month); } catch(e) { return 0; }
       }
     }
   }
@@ -5200,17 +5241,18 @@ function getMonthlyActual(year, month, metric) {
     case 'ota':
       return 0;
     default: {
-      // 总营收仍走 JY03 门店收入
-      return getJy03Revenue(y, month);
+      // 总营收仍走 JY03 门店收入；旧年份（如2023）无 JY03 数据时返回 0，让 YoY 图表用 hasMonthlyData 跳过该月
+      try { return getJy03Revenue(y, month); } catch(e) { return 0; }
     }
   }
 }
 
 function hasMonthlyData(year, month, metric) {
-  // v20260725-24：未来月份直接视为无数据
+  // v20260801-01：未来月份直接视为无数据
   var y = parseInt(year, 10);
   var now = new Date();
-  if (y > now.getFullYear() || (y === now.getFullYear() && month > now.getMonth() + 1)) return false;
+  var currentMo = now.getMonth() + 1;
+  if (y > now.getFullYear() || (y === now.getFullYear() && month > currentMo)) return false;
   // v20260726-08：部门类指标按 dept_targets_actual 是否已填判断；总营收仍走 JY03。
   if (metric === 'room' || metric === 'fb' || metric === 'marketing' || metric === 'ota') {
     var ys = String(y);
@@ -5222,6 +5264,12 @@ function hasMonthlyData(year, month, metric) {
       var v = parseFloat(m[metric]) || 0;
       return v > 0;
     } catch (e) { return false; }
+  }
+  // v20260801-01：当前月份 JY03 数据未录入则视为无数据，避免同比/环比把月初空月算进去
+  if (y === now.getFullYear() && month === currentMo) {
+    var obj = getJy03RevenueObj();
+    var ys = String(y);
+    return !!(obj[ys] && obj[ys][month] != null);
   }
   // v20260725-19：总营收仅使用 JY03 门店收入判断该月是否有数据；缺失则视为无数据，不抛异常
   try {
@@ -5303,7 +5351,7 @@ function renderYoYChart() {
         scales: {
           y: {
             title: { display: true, text: '\u540c\u6bd4\u589e\u957f\u7387 (%)' },
-            ticks: { callback: function(v) { return v.toFixed(0) + '%'; } },
+            ticks: { callback: function(v) { return v.toFixed(1) + '%'; } },
             grid: { color: 'rgba(0,0,0,0.05)' }
           },
           x: {
@@ -5312,7 +5360,6 @@ function renderYoYChart() {
         },
         plugins: {
           legend: { display: false },
-          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return v.toFixed(1) + '%'; }, color: '#333', font: { size: 10 } },
           tooltip: {
             callbacks: {
               label: function(ctx) {
@@ -5429,7 +5476,7 @@ function renderMoMChart() {
             title: { display: true, text: '\u73af\u6bd4\u589e\u957f\u7387 (%)' },
             min: -yMax,
             max: yMax,
-            ticks: { callback: function(v) { return v.toFixed(0) + '%'; } },
+            ticks: { callback: function(v) { return v.toFixed(1) + '%'; } },
             grid: { color: 'rgba(0,0,0,0.05)' }
           },
           x: {
@@ -5439,7 +5486,6 @@ function renderMoMChart() {
         },
         plugins: {
           legend: { display: true, position: 'bottom' },
-          datalabels: { display: true, anchor: 'end', align: 'top', formatter: function(v) { return v != null ? v.toFixed(1) + '%' : ''; }, color: function(ctx) { return ctx.dataset.borderColor; }, font: { size: 10 }, offset: 4, clamp: true },
           tooltip: {
             callbacks: {
               label: function(ctx) {
@@ -5471,11 +5517,15 @@ function getJy03FullObj() {
 }
 function getJy03Nights(yr, mo) {
   yr = String(yr).replace('年', '').trim(); mo = parseInt(mo, 10);
-  // v20260725-24：未来月份不视为缺失，直接返回 0
+  // v20260801-01：未来月份或当前月份（数据尚未完整生成）缺失时直接返回 0
   var now = new Date();
   var yNum = parseInt(yr, 10);
-  if (yNum > now.getFullYear() || (yNum === now.getFullYear() && mo > now.getMonth() + 1) || (yNum === now.getFullYear() && mo === now.getMonth() + 1 && now.getDate() < 5)) return 0;
+  var currentMo = now.getMonth() + 1;
+  if (yNum > now.getFullYear() || (yNum === now.getFullYear() && mo > currentMo)) return 0;
   var obj = getJy03NightsObj();
+  if (yNum === now.getFullYear() && mo === currentMo) {
+    if (!obj[yr] || obj[yr][mo] == null) return 0;
+  }
   if (!obj[yr]) throw new Error('JY03 间夜数数据源缺失：年份=' + yr + '，月份=' + mo);
   if (obj[yr][mo] == null) throw new Error('JY03 间夜数数据源缺失：年份=' + yr + '，月份=' + mo);
   return obj[yr][mo];
@@ -5495,11 +5545,15 @@ function getJy03RevenueObj() {
 }
 function getJy03Revenue(yr, mo) {
   yr = String(yr).replace('年', '').trim(); mo = parseInt(mo, 10);
-  // v20260725-24：未来月份不视为缺失，直接返回 0（缺失抛异常策略仍适用于非未来月份）
+  // v20260801-01：未来月份或当前月份（数据尚未完整生成）缺失时直接返回 0
   var now = new Date();
   var yNum = parseInt(yr, 10);
-  if (yNum > now.getFullYear() || (yNum === now.getFullYear() && mo > now.getMonth() + 1) || (yNum === now.getFullYear() && mo === now.getMonth() + 1 && now.getDate() < 5)) return 0;
+  var currentMo = now.getMonth() + 1;
+  if (yNum > now.getFullYear() || (yNum === now.getFullYear() && mo > currentMo)) return 0;
   var obj = getJy03RevenueObj();
+  if (yNum === now.getFullYear() && mo === currentMo) {
+    if (!obj[yr] || obj[yr][mo] == null) return 0;
+  }
   if (!obj[yr]) throw new Error('JY03 门店收入数据源缺失：年份=' + yr + '，月份=' + mo);
   if (obj[yr][mo] == null) throw new Error('JY03 门店收入数据源缺失：年份=' + yr + '，月份=' + mo);
   return obj[yr][mo];
@@ -5524,6 +5578,27 @@ function getJy03Rooms(yr, mo) {
   return obj[yr][mo];
 }
 
+// JY03「出租率(扣维修房)」——来自别样红 JY03 月报（v20260801-07）
+// 当前月份数据未生成 → 返回 0；历史月份缺失 → 返回 null（由调用方报错）
+function getJy03OccExclMaint(yr, mo) {
+  yr = String(yr).replace('年', '').trim(); mo = parseInt(mo, 10);
+  var now = new Date();
+  var yNum = parseInt(yr, 10);
+  var currentMo = now.getMonth() + 1;
+  if (yNum > now.getFullYear() || (yNum === now.getFullYear() && mo > currentMo)) return 0;
+  var full = getJy03FullObj();
+  if (yNum === now.getFullYear() && mo === currentMo) {
+    if (!full[yr] || !full[yr][mo] || full[yr][mo]['出租率(扣维修房)'] == null) return 0;
+  }
+  if (!full[yr] || !full[yr][mo]) return null;
+  var raw = full[yr][mo]['出租率(扣维修房)'];
+  if (raw == null || raw === '') return null;
+  var v = parseFloat(String(raw).replace('%', '').replace('％', ''));
+  if (isNaN(v)) return null;
+  if (v > 1) v = v / 100;
+  return v;
+}
+
 // 读取某年某月某房型的维修房占房量（维修天数），来自「维修房占房量」Sheet（v20260725-14 新增）
 function getRoomMaintenance(yr, mo, code) {
   try {
@@ -5534,58 +5609,20 @@ function getRoomMaintenance(yr, mo, code) {
   } catch (e) { return 0; }
 }
 
-
-// v20260801-03: 从 JY03 完整记录读取指定字段
-function getJy03FullField(yr, mo, field) {
-  yr=String(yr).replace('年','').trim(); mo=parseInt(mo,10);
-  var obj=getJy03FullObj();
-  if(!obj[yr]||!obj[yr][mo]) return null;
-  return obj[yr][mo][field];
-}
-
-// v20260801-03: 酒店客房营收（不含早）= JY03 门店收入 - 餐厅营收 - 餐饮 - 早餐划拨
-function getRoomRevenue(yr, mo) {
-  yr=String(yr).replace('年','').trim(); mo=parseInt(mo,10);
-  var rev=getJy03Revenue(yr,mo);
-  var fbRev=getJy03FullField(yr,mo,'餐厅营收');
-  if(fbRev!=null) rev-=(parseFloat(fbRev)||0);
-  var catering=getJy03FullField(yr,mo,'餐饮');
-  if(catering!=null) rev-=(parseFloat(catering)||0);
-  // 早餐划拨
-  try{ var bfAlloc=JSON.parse(localStorage.getItem('fb_breakfast_alloc')||'{}')||{};
-    var k=yr+'-'+String(mo).padStart(2,'0');
-    var bf=parseFloat(bfAlloc[k])||0;
-    if(bf>0) rev-=bf;
-  }catch(e){}
-  return rev;
-}
-
-// v20260801-03: 从 JY03 完整记录读取 出租率(扣维修房)，已存储为百分比（如 65 表示 65%），返回小数
-function getJy03OccRate(yr, mo) {
-  yr=String(yr).replace('年','').trim(); mo=parseInt(mo,10);
-  var val=getJy03FullField(yr,mo,'出租率(扣维修房)');
-  if(val!=null) return parseFloat(val)/100;
-  return null;
-}
-
-// 将 JY03 间夜数、客房数应用到 OCC/ADR/RevPAR 计算（v20260725-29）
-// OCC/RevPAR 分母优先使用 JY03「客房数」（当年月可用房间夜数，动态变化）。
-// 缺失时回退到旧口径 (D.meta.total_rooms || 166) × 当月实际天数，保证不空白。
+// 将 JY03 间夜数、客房数、出租率(扣维修房)应用到 OCC/ADR/RevPAR 计算（v20260801-07）
+// OCC 取 JY03「出租率(扣维修房)」列（官方口径），缺失直接报错，不回落计算。
 function roomWithJy03Metrics(m) {
-  var effNights = getJy03Nights(m.year, m.month);            // JY03 间夜数（售出）
+  var effNights = getJy03Nights(m.year, m.month);
   var legacyDenom = ((D.meta && D.meta.total_rooms) || 166) * (m.days || 0);
-  var jy03Rooms = getJy03Rooms(m.year, m.month);             // JY03 客房数（可用房间夜数）
+  var jy03Rooms = getJy03Rooms(m.year, m.month);
   var denom = (jy03Rooms && jy03Rooms > 0) ? jy03Rooms : legacyDenom;
-  // v20260801-03: OCC 直接从 JY03「出租率(扣维修房)」读取
-  var jy03Occ = getJy03OccRate(m.year, m.month);
-  var occ = (jy03Occ != null) ? jy03Occ : (denom > 0 ? effNights / denom : (m.avg_occ || 0));
-  // v20260801-03: 客房营收 = JY03 门店收入 - 餐厅营收 - 餐饮 - 早餐划拨
-  var roomRev = getRoomRevenue(m.year, m.month);
-  // v20260801-03: ADR = 客房营收 / 间夜数
-  var adr = effNights > 0 ? roomRev / effNights : (m.avg_adr || 0);
-  // v20260801-03: RevPAR = OCC × ADR
-  var revpar = occ * adr;
-  return Object.assign({}, m, { jy03: effNights, eff_nights: effNights, jy03Rooms: jy03Rooms, avg_occ: occ, avg_adr: adr, avg_revpar: revpar, revenue: roomRev });
+
+  var occ = getJy03OccExclMaint(m.year, m.month);
+  if (occ == null) throw new Error('JY03 出租率(扣维修房)数据缺失：年份=' + m.year + '，月份=' + m.month);
+
+  var adr = effNights > 0 ? (m.revenue || 0) / effNights : (m.avg_adr || 0);
+  var revpar = denom > 0 ? (m.revenue || 0) / denom : (m.avg_revpar || 0);
+  return Object.assign({}, m, { jy03: effNights, eff_nights: effNights, jy03Rooms: jy03Rooms, avg_occ: occ, avg_adr: adr, avg_revpar: revpar });
 }
 
 function renderRooms() {
@@ -5616,25 +5653,25 @@ function renderRooms() {
   const totalJy03 = roomData.reduce((s,m) => s + (m.jy03 || 0), 0);
   const totalEffNights = roomData.reduce((s,m) => s + (m.eff_nights || 0), 0);
   const totalRooms = roomData.reduce((s,m) => s + (m.jy03Rooms || 0), 0);
-  // 与 JY03 报表合计行口径保持一致：OCC = 总间夜 / 总客房数，RevPAR = 总营收 / 总客房数
-  const avgOCC = totalRooms > 0 ? totalEffNights / totalRooms : 0;
+  // OCC KPI 直接用 JY03「出租率(扣维修房)」各月平均（v20260801-08），不再用 间夜/客房 推算
+  const avgOCC = roomData.length > 0 ? roomData.reduce((s,m) => s + (m.avg_occ || 0), 0) / roomData.length : 0;
   const avgADR = totalEffNights > 0 ? totalRev/totalEffNights : 0;
   const avgRevPAR = totalRooms > 0 ? totalRev / totalRooms : 0;
   const compRev = compDataSame.reduce((s,m)=>s + (m.revenue || 0),0);
   const compNights = compDataSame.reduce((s,m)=>s + (m.nights || 0),0);
   const compRoomsSame = compDataSame.reduce((s,m)=>s + (m.jy03Rooms || 0),0);
   const compEffNightsSame = compDataSame.reduce((s,m)=>s + (m.eff_nights || 0),0);
-  const compOCCSame = compRoomsSame > 0 ? compEffNightsSame / compRoomsSame : 0;
+  const compOCCSame = compDataSame.length > 0 ? compDataSame.reduce((s,m)=>s + (m.avg_occ || 0), 0) / compDataSame.length : 0;
   const kpiHasComp = isSingleYear && baseCmpYear;
   const revYoY = kpiHasComp && compRev > 0 ? ((totalRev - compRev)/compRev*100) : null;
   const occYoY = kpiHasComp && compDataSame.length > 0 ? ((avgOCC - compOCCSame)*100) : null;
   const cmpYearLabel = baseCmpYear ? baseCmpYear+'年' : '';
 
   document.getElementById('roomKPIs').innerHTML = `
-    <div class="kpi-card k-blue xl"><div class="kpi-tag">不含早</div><div class="kpi-label">客房营收</div><div class="kpi-value">¥${fmt(totalRev,2)}</div><div class="kpi-sub">${revYoY!==null?`<span class="${revYoY>=0?'trend-up':'trend-down'}">${revYoY>=0?'▲':'▼'} ${Math.abs(revYoY).toFixed(1)}%</span> 较${cmpYearLabel}`:''}</div></div>
-    <div class="kpi-card k-green xl"><div class="kpi-tag">不含早</div><div class="kpi-label">平均出租率 OCC</div><div class="kpi-value">${fmtPct(avgOCC,2)}</div><div class="kpi-sub">${occYoY!==null?`<span class="${occYoY>=0?'trend-up':'trend-down'}">${occYoY>=0?'▲':'▼'} ${Math.abs(occYoY).toFixed(1)}pp</span> 较${cmpYearLabel}`:''}</div></div>
-    <div class="kpi-card k-orange xl"><div class="kpi-tag">不含早</div><div class="kpi-label">平均房价 ADR</div><div class="kpi-value">¥${fmt(avgADR,2)}</div><div class="kpi-sub">有效间夜 ${fmt(totalEffNights,1)}</div></div>
-    <div class="kpi-card k-purple xl"><div class="kpi-tag">不含早</div><div class="kpi-label">每房收益 RevPAR</div><div class="kpi-value">¥${fmt(avgRevPAR,2)}</div><div class="kpi-sub">OCC × ADR</div></div>
+    <div class="kpi-card k-blue xl"><div class="kpi-tag">含早</div><div class="kpi-label">客房营收</div><div class="kpi-value">¥${fmt(totalRev,2)}</div><div class="kpi-sub">${revYoY!==null?`<span class="${revYoY>=0?'trend-up':'trend-down'}">${revYoY>=0?'▲':'▼'} ${Math.abs(revYoY).toFixed(1)}%</span> 较${cmpYearLabel}`:''}</div></div>
+    <div class="kpi-card k-green xl"><div class="kpi-tag">含早</div><div class="kpi-label">平均出租率</div><div class="kpi-value">${fmtPct(avgOCC,2)}</div><div class="kpi-sub">${occYoY!==null?`<span class="${occYoY>=0?'trend-up':'trend-down'}">${occYoY>=0?'▲':'▼'} ${Math.abs(occYoY).toFixed(1)}pp</span> 较${cmpYearLabel}`:''}</div></div>
+    <div class="kpi-card k-orange xl"><div class="kpi-tag">含早</div><div class="kpi-label">平均房价 ADR</div><div class="kpi-value">¥${fmt(avgADR,2)}</div><div class="kpi-sub">有效间夜 ${fmt(totalEffNights,1)}</div></div>
+    <div class="kpi-card k-purple xl"><div class="kpi-tag">含早</div><div class="kpi-label">每房收益 RevPAR</div><div class="kpi-value">¥${fmt(avgRevPAR,2)}</div><div class="kpi-sub">OCC × ADR</div></div>
   `;
 
   // 统一使用 1-12 月作为横轴；有对比年份时，对比年份显示全年 12 个月数据，当前年份显示实际月份数据
@@ -5650,13 +5687,12 @@ function renderRooms() {
   for (let mo = 1; mo <= 12; mo++) curOCC12.push(getMonthValue(roomData, mo, function(m) { return m.avg_occ * 100; }));
   truncateTrailingZeros(curOCC12);
   const occDatasets = [];
-  // C-1: OCC 同比固定 2025 年
-  if (filterState.year !== 2025) {
-    const cpal = yearPalette(2025);
+  cmpYears.forEach(function(cy) {
+    const cpal = yearPalette(cy);
     const arr = [];
-    for (let mo = 1; mo <= 12; mo++) arr.push(getMonthValue(getCompareRoomMonthly(2025), mo, function(m) { return m.avg_occ * 100; }));
-    occDatasets.push({ label: '2025年', data: arr, borderColor: cpal.main, backgroundColor: cpal.fill, fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, spanGaps: true });
-  }
+    for (let mo = 1; mo <= 12; mo++) arr.push(getMonthValue(getCompareRoomMonthly(cy), mo, function(m) { return m.avg_occ * 100; }));
+    occDatasets.push({ label: cy+'年', data: arr, borderColor: cpal.main, backgroundColor: cpal.fill, fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, spanGaps: true });
+  });
   occDatasets.push({ label: filterState.year+'年', data: curOCC12, borderColor: curCol.main, backgroundColor: curCol.fill, fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, spanGaps: false });
   charts.occ = new Chart(document.getElementById('chartOCC'), {
     type: 'line', data: { labels: chartLabels || ['无数据'], datasets: occDatasets },
@@ -9256,7 +9292,7 @@ var fbSub = (function() {
           layout: { padding: { top: 10, right: 10, bottom: 0 } },
           scales: {
             x: { offset: true, ticks: { display: false }, grid: { drawTicks: false }, border: { display: false } },
-            y: { position: 'left', min: 0, max: yMaxRate, title: { display: true, text: '达成率' }, ticks: { callback: function(v) { return v.toFixed(0) + '%'; } }, grid: { drawOnChartArea: true }, afterFit: function(scale) { scale.width = 90; } }
+            y: { position: 'left', min: 0, max: yMaxRate, title: { display: true, text: '达成率' }, ticks: { callback: function(v) { return v.toFixed(1) + '%'; } }, grid: { drawOnChartArea: true }, afterFit: function(scale) { scale.width = 90; } }
           },
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return '目标达成率: ' + context.parsed.y.toFixed(1) + '%'; } } } }
         }
@@ -11346,7 +11382,7 @@ var rmSub = (function() {
       options: {
         responsive: true, maintainAspectRatio: false,
         layout: { padding: { right: 10 } },
-        scales: { x: { ticks: { display: false }, grid: { display: false }, border: { display: false } }, y: { position: 'left', title: { display: true, text: '金额' }, stacked: false, max: yMaxTarget > 0 ? yMaxTarget : undefined, ticks: { callback: function (v) { return '¥' + fmt(v,2); } }, grid: { display: false }, afterFit: function (s) { s.width = 90; } } },
+        scales: { y: { position: 'left', title: { display: true, text: '金额' }, stacked: false, max: yMaxTarget > 0 ? yMaxTarget : undefined, ticks: { callback: function (v) { return '¥' + fmt(v,2); } }, afterFit: function (s) { s.width = 90; } } },
         plugins: {
           legend: { display: false },
           nestedTarget: { targetValues: targetArr, borderColor: '#ff6d00', borderWidth: 2, offset: 6, hiddenTarget: !window[stateKey].target },
@@ -11357,7 +11393,7 @@ var rmSub = (function() {
 
     charts[prefix + 'Rate'] = new Chart($(prefix + 'Rate'), {
       type: 'line',
-      data: { labels: ax, datasets: [{ label: '目标达成率', data: rateArr, borderColor: '#1a73e8', backgroundColor: '#1a73e8', borderWidth: 2, borderDash: [6, 4], pointRadius: 4, pointBackgroundColor: rateArr.map(function(v) { return v >= 100 ? '#4caf50' : '#f44336'; }), fill: false, tension: 0.3 }] },
+      data: { labels: ax, datasets: [{ label: '目标达成率', data: rateArr, borderColor: '#1a73e8', backgroundColor: '#1a73e8', borderWidth: 2, borderDash: [6, 4], pointRadius: 4, pointBackgroundColor: '#1a73e8', fill: false, tension: 0.3 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         layout: { padding: { top: 10, right: 10, bottom: 0 } },
@@ -11399,52 +11435,36 @@ var rmSub = (function() {
     el.innerHTML = h;
   }
 
-  
-  function renderRmTgtBar(tgtArr, actArr, ax) {
-    ax = ax || MO;
-    try { if (charts.rmTgtBar) charts.rmTgtBar.destroy(); } catch(e) {}
-    var ctx = document.getElementById('rmTgtBar');
-    if (!ctx) return;
-    var barColors = actArr.map(function(v, i) { return tgtArr[i] > 0 ? (v >= tgtArr[i] ? 'rgba(76,175,80,0.85)' : 'rgba(244,67,54,0.85)') : 'rgba(26,115,232,0.85)'; });
-    charts.rmTgtBar = new Chart(ctx, {
-      type: 'bar', plugins: [window.nestedTargetPlugin],
-      data: { labels: ax, datasets: [
-        { label: '实际', data: actArr, backgroundColor: barColors, borderWidth: 0, borderRadius: 4, order: 1 },
-        { label: '目标', data: tgtArr, backgroundColor: 'rgba(0,0,0,0)', borderColor: '#ff6d00', borderWidth: 2, order: 2 }
-      ] },
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { display: false }, grid: { display: false }, border: { display: false } }, y: { grid: { display: false } } },
-        plugins: { legend: { position: 'bottom' }, nestedTarget: { targetValues: tgtArr, borderColor: '#ff6d00', borderWidth: 2, offset: 6, hiddenTarget: false },
-          tooltip: { callbacks: { label: function(c) { var i = c.dataIndex; return '实际: ¥' + fmt(actArr[i]||0,2) + ' (目标: ¥' + fmt(tgtArr[i]||0,2) + ')'; } } } }
-      }
-    });
-  }
-
-function renderRoomTgt() {
+  function renderRoomTgt() {
     ensureRoomTgtLoaded();
     var yrSel = $('filterYear');
     if (!yrSel) return;
     var yr = String(yrSel.value).replace('年', '').trim();
     if (!yr || yr === '0') return;
 
-    // D-3: 关联逻辑参照 OCC — 固定12个月，不随月份筛选变化
-    var ax = MO.map(function (m) { return String(parseInt(m, 10)); }).map(function (n) { return n + '月'; });
+    // 月份筛选：与客房其他 TAB 共用 rmMF；空数组表示「全部」
+    var moNs = moNums('rmMF');
+    var ax = (moNs.length ? moNs : MO.map(function (m) { return String(parseInt(m, 10)); })).map(function (n) { return n + '月'; });
 
-    // D-2: 酒店客房目标 — 仅保留酒店客房 KPI + 目标VS实际条形图
+    // 酒店客房目标 = 主数据管理「酒店目标」录入区 hotelRoom；部门目标 = 客房部门目标（dept_targets.room）(v20260725-14)
     var roomTgtArr = ax.map(function (m) { return hotelRoomTgt(yr, m); });
     var roomActArr = ax.map(function (m) { return roomMonthlyActual(yr, m); });
+    var deptTgtArr = ax.map(function (m) { return roomTargetFromDept(yr, m); });
+    var deptActArr = ax.map(function (m) { return roomActualFromDept(yr, m); }); // 读部门目标表「客房部门实际金额」(v20260725-14)
 
-    var rT = 0, rA = 0;
-    ax.forEach(function (m, i) { rT += roomTgtArr[i]; rA += roomActArr[i]; });
-    var rr = rT > 0 ? rA / rT : 0;
+    var rT = 0, rA = 0, dT = 0, dA = 0;
+    ax.forEach(function (m, i) { rT += roomTgtArr[i]; rA += roomActArr[i]; dT += deptTgtArr[i]; dA += deptActArr[i]; });
+    var rr = rT > 0 ? rA / rT : 0, dr = dT > 0 ? dA / dT : 0;
     $('rmTgtK').innerHTML =
       '<div class="kpi-card k-blue"><div class="kpi-label">酒店客房目标</div><div class="kpi-value">¥' + fmt(rT,2) + '</div></div>' +
-      '<div class="kpi-card k-green"><div class="kpi-label">酒店客房实际完成</div><div class="kpi-value">¥' + fmt(rA,2) + '</div><div class="kpi-sub">完成率 <span class="' + (rr >= 1 ? 'trend-up' : 'trend-down') + '">' + pct(rr) + '</span></div></div>';
+      '<div class="kpi-card k-green"><div class="kpi-label">酒店客房实际完成</div><div class="kpi-value">¥' + fmt(rA,2) + '</div><div class="kpi-sub">完成率 <span class="' + (rr >= 1 ? 'trend-up' : 'trend-down') + '">' + pct(rr) + '</span></div></div>' +
+      '<div class="kpi-card k-orange"><div class="kpi-label">部门目标</div><div class="kpi-value">¥' + fmt(dT,2) + '</div></div>' +
+      '<div class="kpi-card k-purple"><div class="kpi-label">部门实际完成</div><div class="kpi-value">¥' + fmt(dA,2) + '</div><div class="kpi-sub">完成率 <span class="' + (dr >= 1 ? 'trend-up' : 'trend-down') + '">' + pct(dr) + '</span></div></div>';
 
     buildRoomTargetPair('rmTgt1', roomTgtArr, roomActArr, ax);
-    renderRmTgtBar(roomTgtArr, roomActArr, ax);
+    buildRoomTargetPair('rmTgt2', deptTgtArr, deptActArr, ax);
     renderRmTgtTbl('rmTgtTbl1', roomTgtArr, roomActArr, ax);
+    renderRmTgtTbl('rmTgtTbl2', deptTgtArr, deptActArr, ax);
   }
 
   // ===== EXPORT（参考模板《客房分析数据源_完整版.xlsx》：3 sheet / 27 列） =====
