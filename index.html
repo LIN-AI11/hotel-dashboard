@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="v20260801-09">
-<title>酒店经营分析看板 v20260801-09</title>
+<meta name="build-version" content="v20260802-05">
+<title>酒店经营分析看板 v20260802-05</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -850,6 +850,12 @@ body {
 #roomMonthlyTable .jy03-edit { width: 100%; min-width: 70px; padding: 4px 6px; font-size: 12px; border: 1px solid var(--border); border-radius: 4px; text-align: right; background: var(--surface); color: var(--text); }
 #roomMonthlyTable .jy03-edit:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
 
+/* 客房模块数据缺失错误提示横幅 (v20260802-02) */
+#roomErrBanner:empty { display: none; }
+.room-err-banner { padding: 10px 14px; margin-bottom: 12px; border-radius: var(--radius); background: #fff4e6; border: 1px solid #ffb84d; color: #7a4400; font-size: 13px; line-height: 1.5; }
+.room-err-banner .err-title { font-weight: 600; margin-bottom: 4px; }
+.room-err-banner .err-item { margin-top: 3px; padding-left: 8px; border-left: 2px solid #ffb84d; }
+
 /* 餐饮分销售点月度营收明细表 — 宽表横向滚动，table-layout:auto 自然对齐 */
 #fbRevTbl { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius); border: 1px solid var(--border); }
 #fbRevTblTable { table-layout: auto; border: none; min-width: max-content; }
@@ -1327,7 +1333,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260801-09</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">v20260802-05</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1456,6 +1462,7 @@ html { scroll-behavior: smooth; }
   </div>
   <!-- Room Sub-Page: 概览 -->
   <div class="fb-page active" id="rmpg-overview">
+    <div id="roomErrBanner"></div>
     <div class="kpi-grid" id="roomKPIs"></div>
     <div class="chart-grid">
       <div class="chart-card">
@@ -5599,6 +5606,40 @@ function getJy03OccExclMaint(yr, mo) {
   return v;
 }
 
+// JY03 客房营收（v20260802-01 → v20260802-02 修复 fb_ms_v3 key 格式）
+// 算法：门店收入 - 餐饮 - 餐厅营收 - 早餐划拨(餐饮月度营收汇总)
+// 数据源：JY03酒店综合统计月报表(固化) + 餐饮分析早餐月度明细表
+// 缺失不回退，直接报错
+function getRoomRevenueFromJy03(yr, mo) {
+  yr = String(yr).replace('年', '').trim(); mo = parseInt(mo, 10);
+  var now = new Date();
+  var yNum = parseInt(yr, 10);
+  var currentMo = now.getMonth() + 1;
+  // 未来月份或当前月份（数据尚未完整生成）缺失时直接返回 0
+  if (yNum > now.getFullYear() || (yNum === now.getFullYear() && mo > currentMo)) return 0;
+  var full = getJy03FullObj();
+  if (yNum === now.getFullYear() && mo === currentMo) {
+    if (!full[yr] || !full[yr][mo] || full[yr][mo]['门店收入'] == null) return 0;
+  }
+  if (!full[yr] || !full[yr][mo]) throw new Error('JY03 客房营收数据源缺失：年份=' + yr + '，月份=' + mo + '（请先导入客房分析数据源）');
+  var rec = full[yr][mo];
+  var storeRev = Number(rec['门店收入']); if (!isFinite(storeRev)) storeRev = 0;
+  var catering = Number(rec['餐饮']); if (!isFinite(catering)) catering = 0;
+  var restRev = Number(rec['餐厅营收']); if (!isFinite(restRev)) restRev = 0;
+  // 早餐划拨：来自餐饮月度营收汇总(fb_ms_v3)，结构 {年: {'X月': {'早餐划拨': 值}}}
+  // ⚠️ fb_ms_v3 的 key 带「年」和「月」后缀（"2024年" / "1月"），与 room_jy03_full（"2024" / 1）不同
+  var ms = {};
+  try { ms = JSON.parse(localStorage.getItem('fb_ms_v3') || '{}') || {}; } catch(e) {}
+  var yrWithYear = yr + '年';
+  var mk = mo + '月';
+  if (!ms[yrWithYear] || !ms[yrWithYear][mk] || ms[yrWithYear][mk]['早餐划拨'] == null) {
+    throw new Error('早餐划拨数据源缺失：年份=' + yrWithYear + '，月份=' + mk + '（请先在餐饮分析→数据管理导入月度营收汇总）');
+  }
+  var bfAlloc = Number(ms[yrWithYear][mk]['早餐划拨']); if (!isFinite(bfAlloc)) bfAlloc = 0;
+  var roomRev = storeRev - catering - restRev - bfAlloc;
+  return roomRev;
+}
+
 // 读取某年某月某房型的维修房占房量（维修天数），来自「维修房占房量」Sheet（v20260725-14 新增）
 function getRoomMaintenance(yr, mo, code) {
   try {
@@ -5611,18 +5652,34 @@ function getRoomMaintenance(yr, mo, code) {
 
 // 将 JY03 间夜数、客房数、出租率(扣维修房)应用到 OCC/ADR/RevPAR 计算（v20260801-07）
 // OCC 取 JY03「出租率(扣维修房)」列（官方口径），缺失直接报错，不回落计算。
+// v20260802-02：单月失败只置 0 + 记录错误，不再因某月缺失连累其他月整图变 0
+// 错误汇总由 renderRooms 收集后通过横幅展示给用户
 function roomWithJy03Metrics(m) {
-  var effNights = getJy03Nights(m.year, m.month);
+  var errs = [];
+  var effNights = 0;
+  var jy03Rooms = 0;
+  var occ = 0;
+  var revenue = 0;
+  try { effNights = getJy03Nights(m.year, m.month); } catch (e) { errs.push(e.message); }
+  try { jy03Rooms = getJy03Rooms(m.year, m.month) || 0; } catch (e) { errs.push(e.message); }
   var legacyDenom = ((D.meta && D.meta.total_rooms) || 166) * (m.days || 0);
-  var jy03Rooms = getJy03Rooms(m.year, m.month);
-  var denom = (jy03Rooms && jy03Rooms > 0) ? jy03Rooms : legacyDenom;
-
-  var occ = getJy03OccExclMaint(m.year, m.month);
-  if (occ == null) throw new Error('JY03 出租率(扣维修房)数据缺失：年份=' + m.year + '，月份=' + m.month);
-
-  var adr = effNights > 0 ? (m.revenue || 0) / effNights : (m.avg_adr || 0);
-  var revpar = denom > 0 ? (m.revenue || 0) / denom : (m.avg_revpar || 0);
-  return Object.assign({}, m, { jy03: effNights, eff_nights: effNights, jy03Rooms: jy03Rooms, avg_occ: occ, avg_adr: adr, avg_revpar: revpar });
+  var denom = (jy03Rooms > 0) ? jy03Rooms : legacyDenom;
+  try {
+    var occRaw = getJy03OccExclMaint(m.year, m.month);
+    if (occRaw == null) throw new Error('JY03 出租率(扣维修房)数据缺失：年份=' + m.year + '，月份=' + m.month);
+    occ = occRaw;
+  } catch (e) { errs.push(e.message); }
+  // 客房营收：JY03门店收入 - 餐饮 - 餐厅营收 - 早餐划拨 (v20260802-01)
+  try { revenue = getRoomRevenueFromJy03(m.year, m.month); } catch (e) { errs.push(e.message); }
+  // ADR = 客房营收 / JY03间夜数 (v20260802-03 显式声明 + 删除遗留回退)
+  // 之前 effNights==0 时回退到 m.avg_adr（原 Excel 老数据），违反"不回退"原则
+  // 现在：当前/未来月份返回 0；历史月份缺失由 getJy03Nights 抛错并由横幅显示
+  var adr = effNights > 0 ? revenue / effNights : 0;
+  // RevPAR = OCC × ADR (v20260802-04 用户明确要求)
+  // 数据源：JY03「出租率(扣维修房)」 × (客房营收 / JY03间夜数)
+  // 缺失处理：当前/未来月返回 0；历史月 OCC/ADR 缺失由对应函数抛错并通过横幅显示
+  var revpar = occ * adr;
+  return Object.assign({}, m, { revenue: revenue, jy03: effNights, eff_nights: effNights, jy03Rooms: jy03Rooms, avg_occ: occ, avg_adr: adr, avg_revpar: revpar, _roomErrs: errs });
 }
 
 function renderRooms() {
@@ -5648,6 +5705,30 @@ function renderRooms() {
 
   const compDataSame = compData.filter(function(c) { return roomData.some(function(r) { return r.month === c.month; }); });
 
+  // 收集本月/对比月数据缺失错误（v20260802-02）
+  (function renderRoomErrBanner() {
+    const errMap = new Map();
+    function collect(arr, yr) {
+      arr.forEach(function(m) {
+        (m._roomErrs || []).forEach(function(msg) {
+          const key = yr + '|' + msg;
+          if (!errMap.has(key)) errMap.set(key, { yr: yr, msg: msg, months: [] });
+          errMap.get(key).months.push(m.month);
+        });
+      });
+    }
+    collect(roomData, filterState.year);
+    collect(compData, baseCmpYear || 0);
+    const banner = document.getElementById('roomErrBanner');
+    if (!banner) return;
+    if (errMap.size === 0) { banner.innerHTML = ''; return; }
+    const items = Array.from(errMap.values()).map(function(e) {
+      const ms = e.months.slice().sort(function(a,b){return a-b;}).join('、');
+      return '<div class="err-item"><b>' + e.yr + ' 年 ' + ms + ' 月</b>：' + e.msg + '</div>';
+    }).join('');
+    banner.innerHTML = '<div class="room-err-banner"><div class="err-title">⚠ 客房模块数据缺失（相关月份已置 0）</div>' + items + '</div>';
+  })();
+
   const totalRev = roomData.reduce((s,m) => s + (m.revenue || 0), 0);
   const totalNights = roomData.reduce((s,m) => s + (m.nights || 0), 0);
   const totalJy03 = roomData.reduce((s,m) => s + (m.jy03 || 0), 0);
@@ -5655,8 +5736,11 @@ function renderRooms() {
   const totalRooms = roomData.reduce((s,m) => s + (m.jy03Rooms || 0), 0);
   // OCC KPI 直接用 JY03「出租率(扣维修房)」各月平均（v20260801-08），不再用 间夜/客房 推算
   const avgOCC = roomData.length > 0 ? roomData.reduce((s,m) => s + (m.avg_occ || 0), 0) / roomData.length : 0;
+  // ADR KPI = 加权平均（Σ客房营收 / ΣJY03间夜数，行业标准）（v20260802-03）
   const avgADR = totalEffNights > 0 ? totalRev/totalEffNights : 0;
-  const avgRevPAR = totalRooms > 0 ? totalRev / totalRooms : 0;
+  // RevPAR KPI = 简单平均（Σm.avg_revpar / 月数），与各月 OCC × ADR 汇总口径一致（v20260802-04）
+  // 注释 "OCC × ADR" = Σocc / 月数 × Σadr / 月数 = avgOCC × avgADR = 52.20% × 215.78 = 112.64
+  const avgRevPAR = roomData.length > 0 ? roomData.reduce((s,m) => s + (m.avg_revpar || 0), 0) / roomData.length : 0;
   const compRev = compDataSame.reduce((s,m)=>s + (m.revenue || 0),0);
   const compNights = compDataSame.reduce((s,m)=>s + (m.nights || 0),0);
   const compRoomsSame = compDataSame.reduce((s,m)=>s + (m.jy03Rooms || 0),0);
@@ -5668,10 +5752,10 @@ function renderRooms() {
   const cmpYearLabel = baseCmpYear ? baseCmpYear+'年' : '';
 
   document.getElementById('roomKPIs').innerHTML = `
-    <div class="kpi-card k-blue xl"><div class="kpi-tag">含早</div><div class="kpi-label">客房营收</div><div class="kpi-value">¥${fmt(totalRev,2)}</div><div class="kpi-sub">${revYoY!==null?`<span class="${revYoY>=0?'trend-up':'trend-down'}">${revYoY>=0?'▲':'▼'} ${Math.abs(revYoY).toFixed(1)}%</span> 较${cmpYearLabel}`:''}</div></div>
-    <div class="kpi-card k-green xl"><div class="kpi-tag">含早</div><div class="kpi-label">平均出租率</div><div class="kpi-value">${fmtPct(avgOCC,2)}</div><div class="kpi-sub">${occYoY!==null?`<span class="${occYoY>=0?'trend-up':'trend-down'}">${occYoY>=0?'▲':'▼'} ${Math.abs(occYoY).toFixed(1)}pp</span> 较${cmpYearLabel}`:''}</div></div>
-    <div class="kpi-card k-orange xl"><div class="kpi-tag">含早</div><div class="kpi-label">平均房价 ADR</div><div class="kpi-value">¥${fmt(avgADR,2)}</div><div class="kpi-sub">有效间夜 ${fmt(totalEffNights,1)}</div></div>
-    <div class="kpi-card k-purple xl"><div class="kpi-tag">含早</div><div class="kpi-label">每房收益 RevPAR</div><div class="kpi-value">¥${fmt(avgRevPAR,2)}</div><div class="kpi-sub">OCC × ADR</div></div>
+    <div class="kpi-card k-blue xl"><div class="kpi-tag">不含早</div><div class="kpi-label">客房营收</div><div class="kpi-value">¥${fmt(totalRev,2)}</div><div class="kpi-sub">${revYoY!==null?`<span class="${revYoY>=0?'trend-up':'trend-down'}">${revYoY>=0?'▲':'▼'} ${Math.abs(revYoY).toFixed(1)}%</span> 较${cmpYearLabel}`:''}</div></div>
+    <div class="kpi-card k-green xl"><div class="kpi-tag">不含早</div><div class="kpi-label">平均出租率</div><div class="kpi-value">${fmtPct(avgOCC,2)}</div><div class="kpi-sub">${occYoY!==null?`<span class="${occYoY>=0?'trend-up':'trend-down'}">${occYoY>=0?'▲':'▼'} ${Math.abs(occYoY).toFixed(1)}pp</span> 较${cmpYearLabel}`:''}</div></div>
+    <div class="kpi-card k-orange xl"><div class="kpi-tag">不含早</div><div class="kpi-label">平均房价 ADR</div><div class="kpi-value">¥${fmt(avgADR,2)}</div><div class="kpi-sub">有效间夜 ${fmt(totalEffNights,1)}</div></div>
+    <div class="kpi-card k-purple xl"><div class="kpi-tag">不含早</div><div class="kpi-label">每房收益 RevPAR</div><div class="kpi-value">¥${fmt(avgRevPAR,2)}</div><div class="kpi-sub">OCC × ADR</div></div>
   `;
 
   // 统一使用 1-12 月作为横轴；有对比年份时，对比年份显示全年 12 个月数据，当前年份显示实际月份数据
