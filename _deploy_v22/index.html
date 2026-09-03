@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260903-3">
-<title>酒店经营分析看板 V20260903-3</title>
+<meta name="build-version" content="V20260904-1">
+<title>酒店经营分析看板 V20260904-1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1269,26 +1269,145 @@ html { scroll-behavior: smooth; }
 }
 
 </style>
-<script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
 <script>
+/* ===== V20260904-1 基础设施：错误可视化 + 离线兜底 + 图表防泄漏 + 大数据解析缓存 ===== */
 (function(){
-  try{
-    var beacon=new BeaconAction({
-      appkey:'0WEB06U85YBSLJNL',
-      versionCode:'1.0.0',
-      channelID:'share',
-      delay:1000,
-      sessionDuration:30*60*1000,
-      isOversea:false,
-      needReportRqdEvent:false
-    });
-    beacon.onDirectUserAction('preview_page_view',{
-      'url':location.href,
-      'referrer':document.referrer,
-      'title':document.title,
-      'sandbox_id':'3221801b7301497fa38eae02408dcdb4'
-    });
-  }catch(e){}
+  // ---------- 1. 全局错误可视化（替代原来 86 处静默的空 catch）----------
+  var shown = {};
+  function showGlobalError(msg){
+    try{
+      var key = String(msg).slice(0,100);
+      if (shown[key]) return;
+      shown[key] = 1;
+      var box = document.getElementById('globalErrBanner');
+      if (!box){
+        box = document.createElement('div');
+        box.id = 'globalErrBanner';
+        box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c62828;color:#fff;padding:8px 14px;font-size:13px;line-height:1.5;box-shadow:0 2px 10px rgba(0,0,0,.35);font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif';
+        document.body.appendChild(box);
+      }
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:2px 0';
+      var txt = document.createElement('span');
+      txt.textContent = '⚠ ' + msg;
+      txt.style.flex = '1';
+      var btn = document.createElement('span');
+      btn.textContent = '×';
+      btn.style.cssText = 'cursor:pointer;font-size:18px;font-weight:bold;opacity:.85;line-height:1';
+      btn.onclick = function(){ row.remove(); if(!box.children.length) box.remove(); };
+      row.appendChild(txt); row.appendChild(btn);
+      box.appendChild(row);
+    }catch(e){}
+  }
+  window.showGlobalError = showGlobalError;
+
+  function isBenign(e){
+    try{
+      if (e && e.target && e.target !== window && e.target.tagName) return true;
+      var m = String((e && e.message) || '');
+      if (m.indexOf('Script error') >= 0) return true;
+      if (m.indexOf('status 434') >= 0) return true;
+      if (m.indexOf('ResizeObserver loop') >= 0) return true;
+    }catch(err){}
+    return false;
+  }
+  window.addEventListener('error', function(e){
+    if (isBenign(e)) return;
+    var src = e.filename ? String(e.filename).split('/').pop() : '';
+    showGlobalError('脚本错误: ' + (e.message || '未知') + (src ? ' (' + src + ':' + e.lineno + ')' : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function(e){
+    var r = e.reason;
+    showGlobalError('异步操作失败: ' + ((r && (r.message || r.errMsg)) || r || '未知'));
+  });
+
+  // ---------- 2. 离线兜底：CDN 不可用时，用本地 vendor 副本顶上 ----------
+  var LIBS = [
+    { g: 'Chart',           p: 'vendor/chart.umd.min.js' },
+    { g: 'ChartDataLabels', p: 'vendor/chartjs-plugin-datalabels.min.js' },
+    { g: 'XLSX',            p: 'vendor/xlsx.full.min.js' }
+  ];
+  window.__ensureLibs = function(){
+    var st = {};
+    for (var i = 0; i < LIBS.length; i++){
+      var lib = LIBS[i];
+      if (window[lib.g]) { st[lib.g] = 'cdn'; continue; }
+      try{
+        var x = new XMLHttpRequest();
+        x.open('GET', lib.p, false);
+        x.send(null);
+        if ((x.status === 200 || x.status === 0) && x.responseText && x.responseText.length > 100){
+          (window.execScript || function(d){ window.eval.call(window, d); })(x.responseText);
+          st[lib.g] = window[lib.g] ? 'local' : 'failed';
+        } else { st[lib.g] = 'unavailable'; }
+      }catch(e){ st[lib.g] = 'error'; }
+    }
+    var local = [];
+    for (var g in st){ if (st[g] === 'local') local.push(g); }
+    if (local.length){
+      showGlobalError('CDN 不可用，已自动切换本地库（' + local.join(' / ') + '），功能不受影响');
+    }
+    if (st.Chart === 'failed' || st.Chart === 'error' || st.Chart === 'unavailable'){
+      showGlobalError('图表库加载失败，图表可能无法显示，请检查网络后刷新');
+    }
+    if (st.XLSX === 'failed' || st.XLSX === 'error' || st.XLSX === 'unavailable'){
+      showGlobalError('Excel 解析库加载失败，数据上传功能不可用');
+    }
+    return st;
+  };
+
+  // ---------- 3. 图表防泄漏：同一 canvas 重建前先销毁旧实例 ----------
+  window.__patchChart = function(){
+    if (typeof window.Chart !== 'function' || window.Chart.__patched) return;
+    var Orig = window.Chart;
+    function Patched(ctx, cfg){
+      try{
+        // Chart.js 接受三种入参：2d context / canvas 元素 / 元素 id 字符串，三种都要取到 canvas
+        var cv = (ctx && ctx.canvas) ? ctx.canvas
+               : (typeof ctx === 'string') ? document.getElementById(ctx)
+               : (ctx && (ctx.tagName === 'CANVAS' || typeof ctx.getContext === 'function')) ? ctx
+               : null;
+        if (cv){
+          var old = (typeof Orig.getChart === 'function') ? Orig.getChart(cv) : null;
+          if (old && typeof old.destroy === 'function') { try { old.destroy(); } catch(e){} }
+        }
+      }catch(e){}
+      try { return new Orig(ctx, cfg); }
+      catch(e){ showGlobalError('图表创建失败: ' + (e && e.message ? e.message : e)); throw e; }
+    }
+    Patched.prototype = Orig.prototype;
+    var statics = ['defaults','helpers','registry','register','unregister','getChart','instances',
+                   'overrides','platform','version','controllers','elements','plugins','scales',
+                   '_adapters','animator'];
+    for (var i = 0; i < statics.length; i++){
+      if (Orig[statics[i]] !== undefined) Patched[statics[i]] = Orig[statics[i]];
+    }
+    for (var k in Orig){
+      if (Object.prototype.hasOwnProperty.call(Orig, k) && Patched[k] === undefined) Patched[k] = Orig[k];
+    }
+    Patched.__patched = true;
+    window.Chart = Patched;
+  };
+
+  // ---------- 4. 内嵌大数据（约765KB）只解析一次，供 4 处调用点复用 ----------
+  window.__getEmbedded = function(){
+    try{
+      if (window.__embeddedCache === undefined){
+        var t = '';
+        try { var el = document.getElementById('embeddedData'); if (el) t = el.textContent; } catch(e){}
+        if (!t) { window.__embeddedCache = null; }
+        else {
+          try { window.__embeddedCache = JSON.parse(t); }
+          catch(e){ window.__embeddedCache = null; showGlobalError('内嵌数据解析失败，页面数据可能为空'); }
+        }
+      }
+      var c = window.__embeddedCache;
+      if (!c) return null;
+      // 返回副本：避免 applyCloudData 等调用方直接改写缓存模板，造成数据被污染
+      if (typeof structuredClone === 'function') return structuredClone(c);
+      return JSON.parse(JSON.stringify(c));
+    }catch(e){ return null; }
+  };
 })();
 </script>
 <style id="kc-style">
@@ -1337,7 +1456,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260903-3</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260904-1</span>
     </div>
     <div class="header-actions">
     </div>
@@ -3660,8 +3779,7 @@ async function refreshFromCloud() {
   const cloudData = await fetchCloudData();
   if (cloudData) {
     try {
-      const embedded = document.getElementById('embeddedData').textContent;
-      applyCloudData(cloudData, JSON.parse(embedded));
+      applyCloudData(cloudData, window.__getEmbedded());
       try { localStorage.setItem('hotel_dashboard_data', JSON.stringify(cloudData)); } catch(e) {}
       updateSyncStatus('cloud');
       if (typeof onFilterChange === 'function') onFilterChange();
@@ -3672,9 +3790,10 @@ async function refreshFromCloud() {
 
 // ============= INIT =============
 async function initData() {
+  // V20260904-1: 先确保依赖库就绪（CDN 不可用时自动切换本地 vendor 副本），并给 Chart 打上防泄漏补丁
+  try { window.__ensureLibs(); window.__patchChart(); } catch(e) { console.error('ensureLibs error:', e); }
   try {
     applyChartDefaults();
-  const embedded = document.getElementById('embeddedData').textContent;
   let cloudData = null;
 
   // Step 1: Try cloud API first (if configured)
@@ -3693,7 +3812,7 @@ async function initData() {
 
   // Step 2: Determine data source (cloud → localStorage → embedded)
   // Always load embedded data as the base (contains all compiled metrics)
-  const embeddedData = JSON.parse(embedded);
+  const embeddedData = window.__getEmbedded();
 
   // Deferred render flag: local path waits for IndexedDB callback; cloud renders immediately
   var _deferred = !cloudData;
@@ -3707,9 +3826,9 @@ async function initData() {
   } else {
     const stored = localStorage.getItem('hotel_dashboard_data');
     if (stored) {
-      try { D = JSON.parse(stored); } catch(e) { D = JSON.parse(embedded); }
+      try { D = JSON.parse(stored); } catch(e) { D = window.__getEmbedded(); }
     } else {
-      D = JSON.parse(embedded);
+      D = window.__getEmbedded();
     }
 
     // Load room_raw from IndexedDB (reliable persistent storage)
@@ -3880,8 +3999,7 @@ async function initData() {
     console.error('initData fatal error:', e);
     // 兜底：无论前面哪里崩溃，至少用嵌入数据让页面能渲染出来
     try {
-      const embedded = document.getElementById('embeddedData').textContent;
-      D = JSON.parse(embedded);
+      D = window.__getEmbedded();
     } catch(err) { console.error('initData embedded fallback failed:', err); }
   } finally {
     // 强制隐藏 loading mask，绝不能让页面卡在初始 loading
@@ -8269,14 +8387,20 @@ async function cloudSave() {
         // Also upload room_raw in background (gzip + chunked via COS)
         cloudUploadRoomRaw();
       }
-      else { console.warn('云端保存失败:', result.error); updateSyncStatus('error'); }
+      else {
+        console.warn('云端保存失败:', result.error);
+        updateSyncStatus('error');
+        window.showGlobalError && window.showGlobalError('云端保存失败：' + (result.error || '未知错误') + '（本次修改可能没存上，请重试）');
+      }
     })
     .catch(function(e) {
       console.warn('云端保存异常:', e.message);
       updateSyncStatus('error');
+      window.showGlobalError && window.showGlobalError('云端保存异常：' + e.message + '（本次修改可能没存上，请检查网络后重试）');
     });
   } catch(e) {
     console.warn('云端保存序列化失败:', e.message);
+    window.showGlobalError && window.showGlobalError('数据打包失败：' + e.message + '（本次修改没能保存到云端）');
   }
 }
 
@@ -8520,8 +8644,7 @@ function resetData() {
     var tx = db.transaction(ROOM_DB_STORE, 'readwrite');
     tx.objectStore(ROOM_DB_STORE).clear();
   }).catch(function(){});
-  const embedded = document.getElementById('embeddedData').textContent;
-  D = JSON.parse(embedded);
+  D = window.__getEmbedded();
   showToast('已重置为初始数据', 'success');
   onFilterChange();
 }
@@ -8610,10 +8733,9 @@ var fbSub = (function() {
 
   // ===== DATA LOAD/SAVE =====
   function loadData() {
-    var emb = $('embeddedData');
-    if (emb) {
+    var d = window.__getEmbedded();
+    if (d) {
       try {
-        var d = JSON.parse(emb.textContent);
         S = d.fb_sales || [];
         B = d.fb_breakfast || [];
         BD = d.fb_breakfast_daily || [];
