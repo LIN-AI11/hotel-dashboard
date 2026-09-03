@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260807-7">
-<title>酒店经营分析看板 V20260807-7</title>
+<meta name="build-version" content="V20260903-3">
+<title>酒店经营分析看板 V20260903-3</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1337,7 +1337,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260807-7</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260903-3</span>
     </div>
     <div class="header-actions">
     </div>
@@ -3610,10 +3610,12 @@ function applyCloudData(cloudData, embeddedData) {
     var cTa = cloudData.fb_targets_a || {};
     var cTd = cloudData.fb_targets_dept || {};
     var cTdAct = cloudData.fb_targets_dept_actual || {};
+    var cDeptAct = cloudData.dept_targets_actual || {}; // v20260903-2: 营业目标管理表的部门实际金额
     var lTaObj = tryParse('fb_ta_v3') || {};
     var lTa = lTaObj.a || {};
     var lTd = lTaObj.dept || {};
     var lTdAct = lTaObj.dept_actual || {};
+    var lDeptAct = tryParse('dept_targets_actual') || {};
     if (!isEmpty(cTa) || !isEmpty(cTd) || !isEmpty(cTdAct)) {
       D.fb_targets_a = cTa;
       D.fb_targets_dept = cTd;
@@ -3623,6 +3625,14 @@ function applyCloudData(cloudData, embeddedData) {
       D.fb_targets_a = lTa;
       D.fb_targets_dept = lTd;
       D.fb_targets_dept_actual = lTdAct;
+      needsCloudSave = true;
+    }
+    // v20260903-2: 部门实际金额(营业目标管理表) - 优先云端, 回退localStorage
+    if (!isEmpty(cDeptAct)) {
+      D.dept_targets_actual = cDeptAct;
+      localStorage.setItem('dept_targets_actual', JSON.stringify(cDeptAct));
+    } else if (!isEmpty(lDeptAct)) {
+      D.dept_targets_actual = lDeptAct;
       needsCloudSave = true;
     }
 
@@ -4448,12 +4458,20 @@ function renderOverview() {
     ? (parseInt(latestDataDate.slice(5,7),10) + '月' + parseInt(latestDataDate.slice(8,10),10) + '日')
     : '—';
 
-  // ---- 下月预测（公式复制自原独立下月预测区）----
+  // ---- 本月预测（v20260903-1：原卡片名「本月预测」已改名为「本月预测」，数据恢复显示当前月而非下月）----
   let nextMonthTarget = 0, nextRoomTarget = 0, nextFbTarget = 0, nextMarketingTarget = 0, nextOtaTarget = 0, nextCompanyTarget = 0;
   let nextMonth = 0, daysInMonth = 0, dailyTarget = 0, gapCardVal = 0, dailyCatchup = 0, gapCardSub = '', nextMonthLabelStr = '—';
   if (latestMonth > 0) {
-    nextMonth = latestMonth + 1;
-    if (nextMonth <= 12) {
+    if (overviewYear === curY) {
+      // 当年：显示当前日历月（如 2026-09 → 9月）
+      nextMonth = curM;
+    } else if (overviewYear < curY) {
+      // 历史年：取最后一个月 12 月作为「本月」
+      nextMonth = 12;
+    } else {
+      nextMonth = 0;
+    }
+    if (nextMonth > 0 && nextMonth <= 12) {
       var nextMonthKey = nextMonth + '月';
       try {
         var dtStored = localStorage.getItem('dept_targets');
@@ -4478,13 +4496,13 @@ function renderOverview() {
         dailyCatchup = totalNeeded / daysInMonth;
         if (cumDiffComplete < 0) {
           gapCardVal = Math.abs(cumDiffComplete) + nextMonthTarget;
-          gapCardSub = '缺口 ¥' + fmt(Math.abs(cumDiffComplete),2) + ' + 下月目标 ¥' + fmt(nextMonthTarget,2);
+          gapCardSub = '缺口 ¥' + fmt(Math.abs(cumDiffComplete),2) + ' + 本月目标 ¥' + fmt(nextMonthTarget,2);
         } else if (cumDiffComplete >= nextMonthTarget) {
           gapCardVal = 0;
-          gapCardSub = '盈余 ¥' + fmt(cumDiffComplete,2) + ' 已覆盖下月目标，无需追补';
+          gapCardSub = '盈余 ¥' + fmt(cumDiffComplete,2) + ' 已覆盖本月目标，无需追补';
         } else {
           gapCardVal = nextMonthTarget - cumDiffComplete;
-          gapCardSub = '下月目标 ¥' + fmt(nextMonthTarget,2) + ' − 盈余 ¥' + fmt(cumDiffComplete,2);
+          gapCardSub = '本月目标 ¥' + fmt(nextMonthTarget,2) + ' − 盈余 ¥' + fmt(cumDiffComplete,2);
         }
         nextMonthLabelStr = nextMonth + '月 · ' + daysInMonth + '天';
       }
@@ -4509,10 +4527,10 @@ function renderOverview() {
           <div class="os-row"><span class="os-metric-label">上月完成率</span><span class="os-metric-value" style="color:${lastMonthRate >= 1 ? 'var(--success)' : 'var(--primary)'}">${fmtPct(lastMonthRate)}</span></div>
         </div>
         <div class="os-block">
-          <div class="os-section-label">下月预测（${nextMonthLabelStr}）</div>
-          <div class="os-row"><span class="os-metric-label">下月目标</span><span class="os-metric-value">¥${fmt(nextMonthTarget,2)}</span></div>
+          <div class="os-section-label">本月预测（${nextMonthLabelStr}）</div>
+          <div class="os-row"><span class="os-metric-label">本月目标</span><span class="os-metric-value">¥${fmt(nextMonthTarget,2)}</span></div>
           <div class="os-row"><span class="os-metric-label">日均目标</span><span class="os-metric-value">¥${fmt(dailyTarget, 0)}</span></div>
-          <div class="os-row"><span class="os-metric-label">缺口+下月目标</span><span class="os-metric-value" style="color:#e65100;">¥${fmt(gapCardVal,2)}</span></div>
+          <div class="os-row"><span class="os-metric-label">缺口+本月目标</span><span class="os-metric-value" style="color:#e65100;">¥${fmt(gapCardVal,2)}</span></div>
           <div class="os-row"><span class="os-metric-label">每日需完成</span><span class="os-metric-value" style="color:var(--danger);">¥${fmt(dailyCatchup, 0)}</span></div>
         </div>
         <div class="os-block">
@@ -7748,6 +7766,7 @@ function saveDeptTargets() {
 
   try { localStorage.setItem('dept_targets', JSON.stringify(dtObj)); } catch(e) {}
   try { localStorage.setItem('dept_targets_actual', JSON.stringify(dtaObj)); } catch(e) {}
+  D.dept_targets_actual = dtaObj; // v20260903-2: 部门实际金额写入 D, 由 cloudSave 同步到云端
 
   saveData();
   showToast('部门目标已保存', 'success');
@@ -7970,6 +7989,7 @@ function importDeptTargetsFromExcel(event) {
 
       try { localStorage.setItem('dept_targets', JSON.stringify(dtObj)); } catch(e) {}
       try { localStorage.setItem('dept_targets_actual', JSON.stringify(dtaObj)); } catch(e) {}
+      D.dept_targets_actual = dtaObj; // v20260903-2: 导入时同步到 D, 由 saveData→cloudSave 同步到云端
       saveData();
 
       showToast('成功导入 ' + rowsImported + ' 条部门目标数据（年份：' + Array.from(yearsFound).join(', ') + '）' + (actualsImported > 0 ? '，含 ' + actualsImported + ' 条实际金额' : ''), 'success');
@@ -8232,6 +8252,7 @@ async function cloudSave() {
     payload.fb_targets = D.fb_targets || existing.fb_targets || [];
     payload.fb_targets_dept = D.fb_targets_dept || existing.fb_targets_dept || {};
     payload.fb_targets_dept_actual = D.fb_targets_dept_actual || existing.fb_targets_dept_actual || {};
+    payload.dept_targets_actual = D.dept_targets_actual || existing.dept_targets_actual || {}; // v20260903-2: 部门实际金额数据源切换到营业目标管理表(dept_targets_actual)
 
     // 保留厨房成本（KitchenCost 独立管理，主看板不覆盖）
     if (existing.kitchen_cost) payload.kitchen_cost = existing.kitchen_cost;
@@ -8927,6 +8948,8 @@ var fbSub = (function() {
   function noBfAct(yr, mk) {
     // 统一数据源: 优先使用《月度营收汇总》(MS)，与「销售点营业总收入」同源，
     // 保证两个头条 KPI 都来自模板同一张表，消除跨表口径差异。
+    // v20260903-3：仅扣除「早餐划拨」= 含早人数×20（房客划账、不是餐厅经营产生）；
+    //              保留「早餐销售收入」(餐厅自售早)，让酒店餐饮完成率含全部真实餐饮收入。
     if (MS && MS[yr] && MS[yr][mk]) {
       var m = MS[yr][mk];
       var total = 0;
@@ -8935,15 +8958,13 @@ var fbSub = (function() {
         total += (parseFloat(m[p]) || 0);
       }
       var alloc = parseFloat(m['早餐划拨']) || 0;
-      var sales = parseFloat(m['早餐销售收入'] || m['早餐']) || 0;
-      return total - alloc - sales;
+      return total - alloc;
     }
     // 回退: 仅当 MS 该月缺失时，才用收入明细聚合（非首选统计方法）
     var f = S.filter(function(d) { return d.y === yr && d.m === mk; });
     var t = f.reduce(function(s, d) { return s + d.rev; }, 0);
     var bh = f.filter(function(d) { return d.sp === '早餐划拨'; }).reduce(function(s, d) { return s + d.rev; }, 0);
-    var bs = f.filter(function(d) { return d.sp === '早餐'; }).reduce(function(s, d) { return s + d.rev; }, 0);
-    return t - bh - bs;
+    return t - bh;
   }
   function bfAlloc(yr, mk) {
     // 优先使用MS早餐划拨数据，回退到含早人数*20
@@ -8967,6 +8988,21 @@ var fbSub = (function() {
     var f = S.filter(function(d) { return d.y === yr && d.m === mk; });
     var t = f.reduce(function(s, d) { return s + d.rev; }, 0);
     return t - bfAlloc(yr, mk);
+  }
+  // 部门实际完成(v20260903-2): 优先从「营业目标管理」页录入的 dept_targets_actual[year][mk].fb 取值,
+  // 该值由用户在「数据管理 → 营业目标管理 → 餐饮部门实际金额」列直接录入,口径与营业目标管理表一致.
+  // 缺失时回退到 deptAct(yr, mk) (即MS扣减早餐划拨).
+  function deptActByActual(yr, mk) {
+    yr = String(yr).replace('年', '').trim();
+    var dta = (D && D.dept_targets_actual) || {};
+    var fromCloud = dta[yr] && dta[yr][mk] && (parseFloat(dta[yr][mk].fb) || 0);
+    if (fromCloud) return fromCloud;
+    try {
+      var lsDta = JSON.parse(localStorage.getItem('dept_targets_actual') || '{}');
+      var fromLs = lsDta[yr] && lsDta[yr][mk] && (parseFloat(lsDta[yr][mk].fb) || 0);
+      if (fromLs) return fromLs;
+    } catch (e) {}
+    return deptAct(yr, mk);
   }
   // 酒店餐饮目标 / 部门目标（不含早）统一读取主数据管理「酒店目标」录入区（dept_targets.hotelFb），删除了原餐饮数据管理编辑器 (v20260725-14)
   function tgt(yr) {
@@ -9765,7 +9801,7 @@ var fbSub = (function() {
       if (tg.a[mk]) aT += tg.a[mk];
       if (tg.dept[mk]) dT += tg.dept[mk];
       aA += noBfAct(yr, mk);
-      dA += TD_ACT[yr] && TD_ACT[yr][mk] ? TD_ACT[yr][mk] : deptAct(yr, mk);
+      dA += deptActByActual(yr, mk);
     });
     var ar = aT > 0 ? aA / aT : 0, dr = dT > 0 ? dA / dT : 0;
     $('fbTgtK').innerHTML =
@@ -9835,7 +9871,7 @@ var fbSub = (function() {
     renderFbc5Legend();
 
     // ===== 部门目标完成（与经营总览“部门目标 VS 部门实际”保持一致） =====
-    buildChartPair('fbc6', ax.map(function(m) { return tg.dept[m] || 0; }), ax.map(function(m) { return TD_ACT[yr] && TD_ACT[yr][m] ? TD_ACT[yr][m] : deptAct(yr, m); }));
+    buildChartPair('fbc6', ax.map(function(m) { return tg.dept[m] || 0; }), ax.map(function(m) { return deptActByActual(yr, m); }));
     renderFbc6Legend();
   }
 
@@ -9934,7 +9970,7 @@ var fbSub = (function() {
     var h2 = '<table class="data-table"><thead><tr><th>月份</th><th>目标</th><th>实际</th><th>差额</th><th>完成率</th><th>达标</th></tr></thead><tbody>';
     var totalT2 = 0, totalA2 = 0;
     moAxis().forEach(function(m) {
-      var t = tg.dept[m] || 0, a = TD_ACT[yr] && TD_ACT[yr][m] ? TD_ACT[yr][m] : deptAct(yr, m);
+      var t = tg.dept[m] || 0, a = deptActByActual(yr, m);
       if (a <= 0) return; // 只显示有实际数据的月份
       if (fbPartialSkip(yr, m)) {
         h2 += '<tr class="partial-month"><td>' + m + fbPartialTag() + '</td><td>¥' + fmt(t,2) + '</td><td>¥' + fmt(a,2) + '</td><td colspan="3">未计入合计</td></tr>';
@@ -10401,7 +10437,7 @@ var fbSub = (function() {
     var dTotalT = 0, dTotalA = 0, dOkCnt = 0, dAllCnt = 0;
     tgMonths.forEach(function(mk) {
       var dT = tg.dept[mk]; if (!dT) return;
-      var dA = TD_ACT[yr] && TD_ACT[yr][mk] ? TD_ACT[yr][mk] : deptAct(yr, mk);
+      var dA = deptActByActual(yr, mk);
       dTotalT += dT; dTotalA += dA; dAllCnt++;
       if (dA >= dT) dOkCnt++;
     });
