@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260904-1">
-<title>酒店经营分析看板 V20260904-1</title>
+<meta name="build-version" content="V20260907-1">
+<title>酒店经营分析看板 V20260907-1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1456,7 +1456,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260904-1</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260907-1</span>
     </div>
     <div class="header-actions">
     </div>
@@ -8708,6 +8708,16 @@ var fbSub = (function() {
     });
   }
 
+  // v20260907：S(fb_sales) 的 y 字段归一化——旧 localStorage 可能存 "2024"(无"年")，
+  // 统一成 "2024年"，与 MS/ORIG_MS 的 key 格式一致，根治年份筛选下拉出现两条重复项。
+  // 复用全局 normYrKey：剔除"年"与非数字后强制补"年"，高鲁棒性。
+  function _normS() {
+    if (!S || !Array.isArray(S)) return;
+    S.forEach(function(d) {
+      if (d && d.y != null) d.y = normYrKey(d.y);
+    });
+  }
+
   var PTS = ['早餐划拨','早餐','中餐包房','中餐散台','自助餐厅','宴会','会议','送餐','茶室','大堂吧','散餐','餐厅赔偿','其他'];
   var COL = CHART_PALETTE;
   var MO = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -8776,6 +8786,8 @@ var fbSub = (function() {
     ORIG_TD_ACT = JSON.parse(JSON.stringify(TD_ACT));
     ORIG_MS = JSON.parse(JSON.stringify(MS));
     _normMS(); // v20260807-6: MS 数字 yr key 镜像,详见 _normMS 注释
+    _normS();  // v20260907：归一化 S 的 y 字段（"2024"→"2024年"），根治年份筛选重复项
+    try { saveData(); } catch(e) {} // v20260907：立即可持久化干净数据，避免下次加载又读回脏 localStorage
 
   }
   function saveData() {
@@ -11349,6 +11361,7 @@ var fbSub = (function() {
       if (mk) { try { MS = JSON.parse(mk); } catch(e) {} }
       var sk = localStorage.getItem('fb_sales_v3');
       if (sk) { try { S = JSON.parse(sk); } catch(e) {} }
+      _normS(); // v20260907：刷新时同步归一化 S 的 y 字段，防止云平台回灌的脏格式再次进入下拉框
       var bk = localStorage.getItem('fb_bf_v3');
       if (bk) { try { B = JSON.parse(bk); } catch(e) {} }
       var tak = localStorage.getItem('fb_ta_v3');
