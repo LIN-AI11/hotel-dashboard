@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260904-1">
-<title>酒店经营分析看板 V20260904-1</title>
+<meta name="build-version" content="V20260923-2">
+<title>酒店经营分析看板 V20260923-2</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1456,7 +1456,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260904-1</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260923-2</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1470,7 +1470,6 @@ html { scroll-behavior: smooth; }
   <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">📊 经营总览</button>
   <button class="tab-btn" data-tab="rooms" onclick="switchTab('rooms')">🏨 客房分析</button>
   <button class="tab-btn" data-tab="fb" onclick="switchTab('fb')">🍽️ 餐饮分析</button>
-  <button class="tab-btn" data-tab="sales" onclick="switchTab('sales')">💼 销售分析</button>
   <button class="tab-btn" data-tab="ota" onclick="switchTab('ota')">🌐 OTA分析</button>
   <button class="tab-btn" data-tab="feedback" onclick="switchTab('feedback')">💬 宾客意见</button>
   <button class="tab-btn" data-tab="data" onclick="switchTab('data')">💾 数据管理</button>
@@ -1579,6 +1578,7 @@ html { scroll-behavior: smooth; }
     <button data-rmtab="sources" onclick="rmSub.switchSub('sources')">📈 客源分析</button>
     <button data-rmtab="roomtype" onclick="rmSub.switchSub('roomtype')">🏷️ 房型分析</button>
     <button data-rmtab="sourcetype" onclick="rmSub.switchSub('sourcetype')">🔀 客源房型分析</button>
+    <button data-rmtab="sy11" onclick="rmSub.switchSub('sy11')">🛒 小商品分析</button>
     <button data-rmtab="dm" onclick="rmSub.switchSub('dm')">💾 数据管理</button>
   </div>
   <!-- Room Filter Bar (moved from global, styled like 餐饮) -->
@@ -1751,6 +1751,46 @@ html { scroll-behavior: smooth; }
       <div style="font-size:48px;margin-bottom:12px;">🔀</div>
       <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px;">客源房型分析</div>
       <div style="font-size:13px;">待补充内容 — 后续将展示客源 × 房型交叉分析</div>
+    </div>
+  </div>
+  <!-- Room Sub-Page: 小商品分析 (SY11) -->
+  <div class="fb-page" id="rmpg-sy11">
+    <div id="sy11ErrBanner"></div>
+    <!-- 控制条 -->
+    <div class="fb-filter-bar" id="sy11FilterBar">
+      <label>年份</label><span class="cmp-chk-group" id="sy11Years"></span>
+      <label>月份</label><span class="cmp-chk-group" id="sy11Months"></span>
+      <label class="inc-partial"><input type="checkbox" id="sy11OnlyCig" onchange="rmSub.renderSy11()"> 仅看香烟</label>
+      <label class="inc-partial"><input type="checkbox" id="sy11ExcCig" onchange="rmSub.renderSy11()" checked> 排除香烟</label>
+      <button class="mini-btn" onclick="rmSub.renderSy11()">刷新</button>
+    </div>
+    <!-- KPI -->
+    <div class="kpi-grid" id="sy11KPIs"></div>
+    <!-- 分类占比 + 明细表 -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">小商品分类销售占比 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">金额</span></div>
+        <div class="chart-canvas-wrap short"><canvas id="chartSy11Cat"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">小商品销售明细 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">按金额降序</span></div>
+        <div style="max-height:440px;overflow:auto;">
+          <table class="fb-table" id="sy11Table"></table>
+        </div>
+      </div>
+    </div>
+    <!-- 香烟专项 -->
+    <div class="chart-card" style="margin-top:16px;">
+      <div class="chart-title">香烟销售分析 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">数据源：别样红SY11</span></div>
+      <div class="fb-filter-bar" style="margin:6px 0 10px;">
+        <label>对比月份</label>
+        <select id="sy11CigMonth" onchange="rmSub.renderSy11Cig()"></select>
+        <span class="cnt" id="sy11CigNote" style="color:var(--text-secondary);font-size:12px;"></span>
+      </div>
+      <div class="chart-canvas-wrap"><canvas id="chartSy11Cig"></canvas></div>
+      <div style="max-height:320px;overflow:auto;margin-top:8px;">
+        <table class="fb-table" id="sy11CigTable"></table>
+      </div>
     </div>
   </div>
   <!-- Room Sub-Page: 数据管理 -->
@@ -1969,6 +2009,7 @@ html { scroll-behavior: smooth; }
       <div class="fb-form-row" style="margin:0">
         <label>月份</label>
         <select id="kc_cmSel" onchange="KitchenCost.render()"></select>
+        <button class="fb-action-btn primary" onclick="KitchenCost.backupToCloud()" title="把本浏览器的厨房成本数据备份到云端，其他设备/地址打开可自动恢复">☁ 备份到云端</button>
       </div>
     </div>
     <div id="kc_upStatus" class="up-status" style="display:none"></div>
@@ -2070,49 +2111,6 @@ html { scroll-behavior: smooth; }
 </div>
 
 <!-- TAB: Sales Analysis -->
-<div class="tab-panel" id="tab-sales">
-  <div class="fb-sub-nav" id="salesSubNav">
-    <button class="active" data-salestab="overview" onclick="salesSub.switchSub('overview')">📊 业绩总览</button>
-    <button data-salestab="detail" onclick="salesSub.switchSub('detail')">📋 销售明细</button>
-    <button data-salestab="dm" onclick="salesSub.switchSub('dm')">⚙️ 数据管理</button>
-  </div>
-  <div class="sales-sub-panel active" id="sales-overview">
-    <div id="salesKpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
-    <div class="chart-grid cols-2">
-      <div class="chart-card">
-        <div class="chart-title">销售人员业绩排名 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">本年</span></div>
-        <div class="chart-canvas-wrap"><canvas id="salesPerformanceChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">目标达成率 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">% </span></div>
-        <div class="chart-canvas-wrap"><canvas id="salesTargetChart"></canvas></div>
-      </div>
-    </div>
-  </div>
-  <div class="sales-sub-panel" id="sales-detail">
-    <div class="data-table-wrap"><table class="data-table" id="salesDetailTable"></table></div>
-  </div>
-  <div class="sales-sub-panel" id="sales-dm">
-    <div class="fb-dm-row">
-      <h4>📥 导入销售数据 <span class="cnt">支持 .xlsx 格式</span></h4>
-      <div class="chart-grid cols-2">
-        <div class="fb-upload-zone" id="uploadSales" onclick="document.getElementById('fileSales').click()">
-          <div class="upload-icon" style="font-size:36px;margin-bottom:8px;">💼</div>
-          <div class="upload-text">点击导入销售明细</div>
-          <div class="upload-hint">列：日期、销售员、客户、业绩金额、目标金额</div>
-        </div>
-        <div class="fb-upload-zone" id="uploadSalesTarget" onclick="document.getElementById('fileSalesTarget').click()">
-          <div class="upload-icon" style="font-size:36px;margin-bottom:8px;">🎯</div>
-          <div class="upload-text">点击导入销售目标</div>
-          <div class="upload-hint">列：年份、月份、销售员、目标金额</div>
-        </div>
-      </div>
-      <input type="file" id="fileSales" accept=".xlsx,.xls" style="display:none" onchange="handleSalesUpload(event)">
-      <input type="file" id="fileSalesTarget" accept=".xlsx,.xls" style="display:none" onchange="handleSalesTargetUpload(event)">
-      <div id="salesImportResult" style="display:none" class="fb-import-result"></div>
-    </div>
-  </div>
-</div>
 
 <!-- TAB: OTA Analysis -->
 <div class="tab-panel" id="tab-ota">
@@ -2168,11 +2166,6 @@ html { scroll-behavior: smooth; }
         <div class="upload-text">点击或拖拽导入餐饮数据</div>
         <div class="upload-hint">支持 .xlsx 格式 · Sheet: 收入明细/早餐日报/月度营收汇总/酒店餐饮目标/部门目标</div>
       </div>
-      <div class="fb-upload-zone" id="uploadSales" onclick="document.getElementById('fileSales').click()">
-        <div class="upload-icon" style="font-size:36px;margin-bottom:8px;">💼</div>
-        <div class="upload-text">点击导入销售数据</div>
-        <div class="upload-hint">支持 .xlsx 格式 · 列：日期/销售员/客户/业绩金额/目标金额</div>
-      </div>
       <div class="fb-upload-zone" id="uploadOta" onclick="document.getElementById('fileOta').click()">
         <div class="upload-icon" style="font-size:36px;margin-bottom:8px;">🌐</div>
         <div class="upload-text">点击导入 OTA 数据</div>
@@ -2181,7 +2174,6 @@ html { scroll-behavior: smooth; }
     </div>
     <input type="file" id="fileRoom" accept=".xlsx,.xls" style="display:none" onchange="handleRoomUpload(event)">
     <input type="file" id="fileFB" accept=".xlsx,.xls" style="display:none" onchange="handleFBUpload(event)">
-    <input type="file" id="fileSales" accept=".xlsx,.xls" style="display:none" onchange="handleSalesUpload(event)">
     <input type="file" id="fileOta" accept=".xlsx,.xls" style="display:none" onchange="handleOtaUpload(event)">
   </div>
 
@@ -3668,6 +3660,17 @@ function applyCloudData(cloudData, embeddedData) {
       needsCloudSave = true;
     }
 
+    // 小商品分析 (SY11)：优先云端，其次本地
+    var cSy11 = cloudData.room_sy11;
+    var lSy11 = tryParse('room_sy11');
+    if (!isEmpty(cSy11)) {
+      localStorage.setItem('room_sy11', JSON.stringify(cSy11));
+      D.room_sy11 = cSy11;
+    } else if (!isEmpty(lSy11)) {
+      D.room_sy11 = lSy11;
+      needsCloudSave = true;
+    }
+
     // 自动汇总：从 fb_raw / fb_breakfast 反算「有数据但 MS 缺失或全零」的月份
     // 逻辑与模板「月度营收汇总」SHEET 一致：早餐划拨 = Σ(含早人数)×20（fb_breakfast.pp）；其余销售点 = Σ(收入明细.销售收入)（fb_raw）
     // 已有有效值（手动上传/历史正确）的月份尊重不覆盖。
@@ -3986,7 +3989,6 @@ async function initData() {
   }
 
   // Init sales & OTA subsystems
-  if (window.salesSub && typeof salesSub.init === 'function') salesSub.init();
   if (window.otaSub && typeof otaSub.init === 'function') otaSub.init();
 
   // Initial render (skip if deferred to IndexedDB callback)
@@ -4145,7 +4147,6 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   if (tab === 'feedback') { loadFeedback(); }
   if (tab === 'rooms' && window.rmSub && typeof rmSub.switchSub === 'function') { rmSub.switchSub('overview'); }
-  if (tab === 'sales' && window.salesSub && typeof salesSub.switchSub === 'function') { salesSub.switchSub('overview'); }
   if (tab === 'ota' && window.otaSub && typeof otaSub.switchSub === 'function') { otaSub.switchSub('overview'); }
   // 切换标签后，按当前视口宽度重新缩放该标签下图表字号
   try { applyResponsiveChartFonts(); } catch (e) {}
@@ -8291,6 +8292,9 @@ async function cloudSaveMeta() {
   payload.jy03_rooms = (function() {
     try { return JSON.parse(localStorage.getItem('room_jy03_rooms') || '{}'); } catch(e) { return existing.jy03_rooms || {}; }
   })();
+  payload.room_sy11 = (function() {
+    try { return JSON.parse(localStorage.getItem('room_sy11') || '[]'); } catch(e) { return existing.room_sy11 || D.room_sy11 || []; }
+  })();
   payload.room_maintenance = (function() {
     try { return JSON.parse(localStorage.getItem('room_maintenance') || '{}'); } catch(e) { return existing.room_maintenance || {}; }
   })();
@@ -8708,6 +8712,16 @@ var fbSub = (function() {
     });
   }
 
+  // v20260907：S(fb_sales) 的 y 字段归一化——旧 localStorage 可能存 "2024"(无"年")，
+  // 统一成 "2024年"，与 MS/ORIG_MS 的 key 格式一致，根治年份筛选下拉出现两条重复项。
+  // 复用全局 normYrKey：剔除"年"与非数字后强制补"年"，高鲁棒性。
+  function _normS() {
+    if (!S || !Array.isArray(S)) return;
+    S.forEach(function(d) {
+      if (d && d.y != null) d.y = normYrKey(d.y);
+    });
+  }
+
   var PTS = ['早餐划拨','早餐','中餐包房','中餐散台','自助餐厅','宴会','会议','送餐','茶室','大堂吧','散餐','餐厅赔偿','其他'];
   var COL = CHART_PALETTE;
   var MO = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -8776,6 +8790,8 @@ var fbSub = (function() {
     ORIG_TD_ACT = JSON.parse(JSON.stringify(TD_ACT));
     ORIG_MS = JSON.parse(JSON.stringify(MS));
     _normMS(); // v20260807-6: MS 数字 yr key 镜像,详见 _normMS 注释
+    _normS();  // v20260907：归一化 S 的 y 字段（"2024"→"2024年"），根治年份筛选重复项
+    try { saveData(); } catch(e) {} // v20260907：立即可持久化干净数据，避免下次加载又读回脏 localStorage
 
   }
   function saveData() {
@@ -8832,10 +8848,13 @@ var fbSub = (function() {
   // ===== FILTERS =====
   function initFilters() {
     var yrs = [];
-    S.forEach(function(d) { if (d.y && !yrs.includes(d.y)) yrs.push(d.y); });
+    // v20260907-2：归一化候选年份后再去重——根治 _normMS 数字镜像("2024")与字符串("2024年")
+    // 并存导致下拉出现两条。S/MS/ORIG_MS 三源全部走 _pushYr 归一化入 yrs（复用全局 normYrKey）。
+    function _pushYr(y) { if (!y) return; var ny = normYrKey(y); if (!yrs.includes(ny)) yrs.push(ny); }
+    S.forEach(function(d) { _pushYr(d.y); });
     // 合并 MS 月度营收汇总的年份
-    if (MS) Object.keys(MS).forEach(function(y) { if (y && !yrs.includes(y)) yrs.push(y); });
-    if (ORIG_MS) Object.keys(ORIG_MS).forEach(function(y) { if (y && !yrs.includes(y)) yrs.push(y); });
+    if (MS) Object.keys(MS).forEach(_pushYr);
+    if (ORIG_MS) Object.keys(ORIG_MS).forEach(_pushYr);
     // 过滤掉全零的未来年份（如2027年）
     yrs = yrs.filter(function(y) {
       var hasData = S.some(function(d) { return d.y === y; });
@@ -10355,7 +10374,7 @@ var fbSub = (function() {
     var curRaw = aggBanqTblByType(yr, types, mo);
     ds.push({ label: yr, data: curRaw, backgroundColor: curPal.main, borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 });
     $('fbc19-title').textContent = '宴会使用桌数同期对比' + (moAll() ? '' : '（' + moLabel() + '）');
-    charts.fbc19 = new Chart($('fbc19'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, title: { display: true, text: '桌数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
+    charts.fbc19 = new Chart($('fbc19'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 18 } }, scales: { y: { beginAtZero: true, title: { display: true, text: '桌数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
   }
   // 宴会类型使用次数同期对比：横轴=宴会类型（与桌数图一致），纵轴=宴会次数（每条宴会记录记 1 次）
   function aggBanqCntByType(yr, types, mo) {
@@ -10382,7 +10401,7 @@ var fbSub = (function() {
     var curRaw = aggBanqCntByType(yr, types, mo);
     ds.push({ label: yr, data: curRaw, backgroundColor: curPal.main, borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 });
     $('fbc21-title').textContent = '宴会类型使用次数同期对比' + (moAll() ? '' : '（' + moLabel() + '）');
-    charts.fbc21 = new Chart($('fbc21'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
+    charts.fbc21 = new Chart($('fbc21'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 18 } }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
   }
   // 宴席套餐点击率：横轴=H列套餐(pkg)，纵轴=次数（每条宴会记录记 1 次）。横轴固定展示所选年份里出现过的全部套餐（不随月份隐藏），按全年总次数降序
   function banqPkgOrder(years) {
@@ -10417,7 +10436,7 @@ var fbSub = (function() {
     var curRaw = aggBanqPkgCnt(yr, pkgs, mo);
     ds.push({ label: yr, data: curRaw, backgroundColor: curPal.main, borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 });
     $('fbc22-title').textContent = '宴席套餐点击率' + (moAll() ? '' : '（' + moLabel() + '）');
-    charts.fbc22 = new Chart($('fbc22'), { type: 'bar', data: { labels: pkgs, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
+    charts.fbc22 = new Chart($('fbc22'), { type: 'bar', data: { labels: pkgs, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 18 } }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
   }
   function rGstType(yr, mo) {
     dc('fbc12'); var f = S.filter(function(d) { return d.y === yr; }); if (!moAll()) f = f.filter(function(d) { return moMatch(d.m); });
@@ -11349,6 +11368,7 @@ var fbSub = (function() {
       if (mk) { try { MS = JSON.parse(mk); } catch(e) {} }
       var sk = localStorage.getItem('fb_sales_v3');
       if (sk) { try { S = JSON.parse(sk); } catch(e) {} }
+      _normS(); // v20260907：刷新时同步归一化 S 的 y 字段，防止云平台回灌的脏格式再次进入下拉框
       var bk = localStorage.getItem('fb_bf_v3');
       if (bk) { try { B = JSON.parse(bk); } catch(e) {} }
       var tak = localStorage.getItem('fb_ta_v3');
@@ -11359,191 +11379,6 @@ var fbSub = (function() {
   };
 })();
 
-// ============= SALES ANALYSIS SUBSYSTEM =============
-var salesSub = (function() {
-  var _init = false;
-  var SALES = [];
-  var TARGETS = {};
-  var DEMO = false;
-  function $(id) { return document.getElementById(id); }
-  function fmt(n, decimals) { decimals = decimals == null ? 0 : decimals; return n == null || n === '' ? '0' : Number(n).toLocaleString('zh-CN', { maximumFractionDigits: decimals, minimumFractionDigits: decimals }); }
-  function dc(id) { if (charts[id]) { charts[id].destroy(); charts[id] = null; } }
-
-  function loadData() {
-    var s = localStorage.getItem('sales_data_v1');
-    if (s) { try { SALES = JSON.parse(s); } catch(e) {} }
-    var t = localStorage.getItem('sales_targets_v1');
-    if (t) { try { TARGETS = JSON.parse(t); } catch(e) {} }
-    if (!SALES.length) { generateDemo(); DEMO = true; }
-  }
-  function generateDemo() {
-    var salesmen = ['张三', '李四', '王五', '赵六', '陈七'];
-    var customers = ['协议A公司', '协议B公司', '散客', '旅行社', '会议客户'];
-    var yr = new Date().getFullYear();
-    SALES = [];
-    for (var i = 0; i < 200; i++) {
-      var mo = (i % 12) + 1, day = (i % 28) + 1;
-      SALES.push({
-        date: yr + '-' + (mo < 10 ? '0' : '') + mo + '-' + (day < 10 ? '0' : '') + day,
-        salesman: salesmen[i % salesmen.length],
-        customer: customers[i % customers.length],
-        amount: Math.round(3000 + Math.random() * 12000),
-        target: Math.round(8000 + Math.random() * 15000)
-      });
-    }
-  }
-  function saveData() { localStorage.setItem('sales_data_v1', JSON.stringify(SALES)); localStorage.setItem('sales_targets_v1', JSON.stringify(TARGETS)); }
-
-  function getYearData(yr) {
-    var prefix = String(yr) + '-';
-    return SALES.filter(function(r) { return r.date && r.date.indexOf(prefix) === 0; });
-  }
-  function aggBySalesman(data) {
-    var obj = {};
-    data.forEach(function(r) {
-      var sm = r.salesman || '未分配';
-      if (!obj[sm]) obj[sm] = { amount: 0, target: 0, count: 0 };
-      obj[sm].amount += (+r.amount || 0);
-      obj[sm].target += (+r.target || 0);
-      obj[sm].count += 1;
-    });
-    return obj;
-  }
-
-  function switchSub(sub) {
-    document.querySelectorAll('#salesSubNav button').forEach(function(b) { b.classList.remove('active'); });
-    var btn = document.querySelector('#salesSubNav [data-salestab="' + sub + '"]');
-    if (btn) btn.classList.add('active');
-    document.querySelectorAll('.sales-sub-panel').forEach(function(p) { p.classList.remove('active'); });
-    var panel = $('sales-' + sub);
-    if (panel) panel.classList.add('active');
-    if (sub === 'overview') renderOverview();
-    if (sub === 'detail') renderDetail();
-  }
-
-  function renderOverview() {
-    var yr = new Date().getFullYear();
-    var data = getYearData(yr);
-    var bySm = aggBySalesman(data);
-    var sorted = Object.keys(bySm).sort(function(a, b) { return bySm[b].amount - bySm[a].amount; });
-    var total = data.reduce(function(s, r) { return s + (+r.amount || 0); }, 0);
-    var totalTarget = data.reduce(function(s, r) { return s + (+r.target || 0); }, 0);
-    var top = sorted[0] || '-';
-    var topAmt = top !== '-' ? bySm[top].amount : 0;
-    var avg = sorted.length ? total / sorted.length : 0;
-
-    var kpiHtml = '<div class="kpi-card"><div class="kpi-label">本年总业绩</div><div class="kpi-value">¥' + fmt(total,2) + '</div>' + (DEMO ? '<div class="kpi-sub">示例数据</div>' : '') + '</div>';
-    kpiHtml += '<div class="kpi-card"><div class="kpi-label">本年总目标</div><div class="kpi-value">¥' + fmt(totalTarget,2) + '</div></div>';
-    kpiHtml += '<div class="kpi-card"><div class="kpi-label">目标达成率</div><div class="kpi-value" style="color:' + (total >= totalTarget ? 'var(--success)' : 'var(--danger)') + '">' + (totalTarget > 0 ? (total / totalTarget * 100).toFixed(1) : 0) + '%</div></div>';
-    kpiHtml += '<div class="kpi-card"><div class="kpi-label">TOP 销售员</div><div class="kpi-value">' + top + '</div><div class="kpi-sub">¥' + fmt(topAmt,2) + '</div></div>';
-    $('salesKpi').innerHTML = kpiHtml;
-
-    var labels = sorted;
-    var amounts = sorted.map(function(k) { return bySm[k].amount; });
-    var targets = sorted.map(function(k) { return bySm[k].target; });
-
-    dc('salesPerformanceChart');
-    charts.salesPerformanceChart = new Chart($('salesPerformanceChart'), {
-      type: 'bar',
-      data: { labels: labels, datasets: [
-        { label: '实际业绩', data: amounts, backgroundColor: '#1a73e8', borderRadius: 4 },
-        { label: '目标金额', data: targets, backgroundColor: 'rgba(26,115,232,0.25)', borderRadius: 4 }
-      ]},
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return '¥' + fmt(v,2); } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ¥' + fmt(c.parsed.y,2); } } } } }
-    });
-
-    dc('salesTargetChart');
-    charts.salesTargetChart = new Chart($('salesTargetChart'), {
-      type: 'bar',
-      data: { labels: labels, datasets: [
-        { label: '达成率 %', data: labels.map(function(k) { var t = bySm[k].target; return t > 0 ? (bySm[k].amount / t * 100) : 0; }), backgroundColor: labels.map(function(_, i) { return CHART_PALETTE[i % CHART_PALETTE.length]; }), borderRadius: 4 }
-      ]},
-      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { callback: function(v) { return v + '%'; } } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.parsed.x.toFixed(1) + '%'; } } } } }
-    });
-  }
-
-  function renderDetail() {
-    var rows = SALES.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-    var html = '<thead><tr><th>日期</th><th>销售员</th><th>客户</th><th>业绩金额</th><th>目标金额</th><th>达成率</th></tr></thead><tbody>';
-    if (!rows.length) { html += '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary)">暂无数据</td></tr>'; }
-    rows.slice(0, 500).forEach(function(r) {
-      var rate = (r.target || 0) > 0 ? (r.amount / r.target * 100).toFixed(1) + '%' : '-';
-      html += '<tr><td>' + r.date + '</td><td>' + (r.salesman || '-') + '</td><td>' + (r.customer || '-') + '</td><td>¥' + fmt(r.amount,2) + '</td><td>¥' + fmt(r.target,2) + '</td><td>' + rate + '</td></tr>';
-    });
-    html += '</tbody>';
-    $('salesDetailTable').innerHTML = html;
-  }
-
-  function handleUpload(event) {
-    var file = event.target.files && event.target.files[0];
-    if (!file) return;
-    var box = $('salesImportResult');
-    var show = function(ok, msg) { if (!box) return; box.style.display = 'block'; box.style.background = ok ? 'rgba(46,160,67,0.12)' : 'rgba(220,53,69,0.12)'; box.style.color = ok ? '#1a7f37' : '#c62828'; box.innerHTML = msg; };
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        var wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        var sheet = wb.SheetNames[0];
-        var rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { raw: false });
-        var n = 0;
-        rows.forEach(function(r) {
-          var date = r['日期'] || r['date'] || r['Date'];
-          var sm = r['销售员'] || r['salesman'] || r['销售'] || '';
-          var cust = r['客户'] || r['customer'] || r['客户名称'] || '';
-          var amt = parseFloat(String(r['业绩金额'] || r['amount'] || r['金额'] || 0).replace(/,/g, '')) || 0;
-          var tgt = parseFloat(String(r['目标金额'] || r['target'] || r['目标'] || 0).replace(/,/g, '')) || 0;
-          if (!date || !sm) return;
-          if (typeof date === 'object' && date.getFullYear) date = date.getFullYear() + '-' + ((date.getMonth()+1)<10?'0':'') + (date.getMonth()+1) + '-' + (date.getDate()<10?'0':'') + date.getDate();
-          SALES.push({ date: String(date), salesman: String(sm).trim(), customer: String(cust).trim(), amount: amt, target: tgt });
-          n++;
-        });
-        DEMO = false;
-        saveData();
-        show(true, '✅ 导入完成：' + n + ' 条销售明细已写入。');
-        showToast('销售数据导入成功', 'success');
-      } catch (err) { console.error(err); show(false, '❌ 解析失败：' + err.message); showToast('销售数据导入失败', 'error'); }
-      event.target.value = '';
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function handleTargetUpload(event) {
-    var file = event.target.files && event.target.files[0];
-    if (!file) return;
-    var box = $('salesImportResult');
-    var show = function(ok, msg) { if (!box) return; box.style.display = 'block'; box.style.background = ok ? 'rgba(46,160,67,0.12)' : 'rgba(220,53,69,0.12)'; box.style.color = ok ? '#1a7f37' : '#c62828'; box.innerHTML = msg; };
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        var wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw: false });
-        var n = 0;
-        rows.forEach(function(r) {
-          var yr = r['年份'] || r['year'] || new Date().getFullYear();
-          var mo = r['月份'] || r['month'];
-          var sm = r['销售员'] || r['salesman'] || '';
-          var tgt = parseFloat(String(r['目标金额'] || r['target'] || 0).replace(/,/g, '')) || 0;
-          if (!yr || !mo || !sm) return;
-          yr = String(yr).replace(/年/g, '').trim();
-          mo = parseInt(String(mo).replace(/月/g, '').trim());
-          if (!TARGETS[sm]) TARGETS[sm] = {};
-          if (!TARGETS[sm][yr]) TARGETS[sm][yr] = {};
-          TARGETS[sm][yr][mo] = tgt;
-          n++;
-        });
-        saveData();
-        show(true, '✅ 导入完成：' + n + ' 条销售目标已写入。');
-        showToast('销售目标导入成功', 'success');
-      } catch (err) { console.error(err); show(false, '❌ 解析失败：' + err.message); showToast('销售目标导入失败', 'error'); }
-      event.target.value = '';
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function init() { if (_init) return; loadData(); _init = true; }
-  return { init: init, switchSub: switchSub, handleUpload: handleUpload, handleTargetUpload: handleTargetUpload };
-})();
-window.salesSub = salesSub;
 
 // ============= OTA ANALYSIS SUBSYSTEM =============
 var otaSub = (function() {
@@ -11690,8 +11525,6 @@ var otaSub = (function() {
   return { init: init, switchSub: switchSub, handleUpload: handleUpload };
 })();
 window.otaSub = otaSub;
-function handleSalesUpload(e) { return salesSub.handleUpload(e); }
-function handleSalesTargetUpload(e) { return salesSub.handleTargetUpload(e); }
 function handleOtaUpload(e) { return otaSub.handleUpload(e); }
 
 // ============= ROOM DATA MANAGEMENT =============
@@ -11791,13 +11624,14 @@ var rmSub = (function() {
     document.querySelectorAll('#tab-rooms .fb-page').forEach(function(p) { p.classList.remove('active'); });
     var pg = $('rmpg-' + tab);
     if (pg) pg.classList.add('active');
-    // 数据管理不需要客房筛选条；其他子页（营业收入/营业目标/客源分析/数据透视）统一使用
+    // 数据管理 / 小商品分析 不需要客房筛选条（各自有独立控件）
     var fb = $('roomFilterBar');
-    if (fb) fb.style.display = (tab === 'dm') ? 'none' : 'flex';
+    if (fb) fb.style.display = (tab === 'dm' || tab === 'sy11') ? 'none' : 'flex';
     if (tab === 'dm' && !_init) { init(); _init = true; }
     if (tab === 'dm') search();
     if (tab === 'tgt') { renderRoomTgt(); }
     if (tab === 'roomtype') { initRoomTypeFilters(); renderRoomType(); }
+    if (tab === 'sy11') { initSy11Filters(); renderSy11(); }
     if (tab === 'overview' || tab === 'sources') {
       var yr = parseInt($('filterYear') ? $('filterYear').value : 0);
       var mo = getM('rmMF').map(function(s) { return parseInt(s, 10); });
@@ -12262,6 +12096,159 @@ var rmSub = (function() {
     else alert(msg);
   }
 
+  // ===== 小商品分析 (SY11 别样红) =====
+  var sy11CatChart = null, sy11CigChart = null;
+  var YEAR_PALETTE = {2024:'#2e9e5b',2025:'#e39b3e',2026:'#2f7fd1',2027:'#8a5cd1',2028:'#d15ca8',2029:'#5c6bc0'};
+  var CAT_PALETTE = ['#12877D','#E39B3E','#2f7fd1','#7b1fa2','#2e9e5b','#d15ca8','#5c6bc0','#ef6c00','#00838f','#8d6e63','#c0ca33','#26a69a'];
+  function sy11YearsAvail() {
+    var ys = {};
+    (D.room_sy11 || []).forEach(function(r){ ys[r.year] = 1; });
+    return Object.keys(ys).map(Number).sort();
+  }
+  function initSy11Filters() {
+    var years = sy11YearsAvail();
+    var sel = document.getElementById('sy11Years');
+    if (sel) {
+      var cur = (years.length ? years[years.length - 1] : new Date().getFullYear());
+      sel.innerHTML = years.map(function(y){
+        return '<label class="chk"><input type="checkbox" value="'+y+'" '+(y===cur?'checked':'')+'> '+y+'</label>';
+      }).join('');
+    }
+    var msel = document.getElementById('sy11Months');
+    if (msel) {
+      var ms = '';
+      for (var m=1; m<=12; m++) ms += '<label class="chk"><input type="checkbox" value="'+m+'" checked> '+m+'月</label>';
+      msel.innerHTML = ms;
+    }
+    var csel = document.getElementById('sy11CigMonth');
+    if (csel) {
+      var cm = '<option value="">— 选择对比月份 —</option>';
+      for (var m2=1; m2<=12; m2++) cm += '<option value="'+m2+'" '+(m2===8?'selected':'')+'>'+m2+'月</option>';
+      csel.innerHTML = cm;
+    }
+  }
+  function getSy11Sel() {
+    var ys = [], ms = [];
+    document.querySelectorAll('#sy11Years input:checked').forEach(function(c){ ys.push(+c.value); });
+    document.querySelectorAll('#sy11Months input:checked').forEach(function(c){ ms.push(+c.value); });
+    return { years: ys, months: ms };
+  }
+  function sy11fmt(v) {
+    return '¥' + (Math.round(v*100)/100).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function renderSy11() {
+    var el = document.getElementById('rmpg-sy11');
+    if (!el) return;
+    var banner = document.getElementById('sy11ErrBanner');
+    if (!D.room_sy11 || !D.room_sy11.length) {
+      if (banner) banner.innerHTML = '<div class="room-err">暂无小商品数据（SY11）。请等待每日自动同步，或运行 sy11_grab.py 抓取。</div>';
+      return;
+    }
+    if (banner) banner.innerHTML = '';
+    var sel = getSy11Sel();
+    var onlyCig = document.getElementById('sy11OnlyCig') && document.getElementById('sy11OnlyCig').checked;
+    var excCig = document.getElementById('sy11ExcCig') && document.getElementById('sy11ExcCig').checked;
+    // 全量（仅按年月筛选）用于计算香烟占比，避免“排除香烟”勾选后该 KPI 变成 0% 失去参考意义
+    var allRows = D.room_sy11.filter(function(r){
+      if (sel.years.length && sel.years.indexOf(r.year) < 0) return false;
+      if (sel.months.length && sel.months.indexOf(r.month) < 0) return false;
+      return true;
+    });
+    var allAmt=0, allCigAmt=0;
+    allRows.forEach(function(r){ allAmt+=r.amount; if(r.isCig) allCigAmt+=r.amount; });
+    var rows = allRows.filter(function(r){
+      if (onlyCig && !r.isCig) return false;
+      if (excCig && r.isCig) return false;
+      return true;
+    });
+    var totAmt=0, totCnt=0; var kinds={};
+    rows.forEach(function(r){ totAmt+=r.amount; totCnt+=r.count; kinds[r.goodsName]=1; });
+    var kpis = document.getElementById('sy11KPIs');
+    kpis.innerHTML =
+      '<div class="kpi-card k-blue xl"><div class="kpi-label">销售额</div><div class="kpi-value">'+sy11fmt(totAmt)+'</div><div class="kpi-sub">'+rows.length+' 条记录</div></div>'+
+      '<div class="kpi-card k-green xl"><div class="kpi-label">销量</div><div class="kpi-value">'+Math.round(totCnt)+' 件</div><div class="kpi-sub">小商品总销量</div></div>'+
+      '<div class="kpi-card k-orange xl"><div class="kpi-label">商品种类</div><div class="kpi-value">'+Object.keys(kinds).length+' 种</div><div class="kpi-sub">去重商品数</div></div>'+
+      '<div class="kpi-card k-purple xl"><div class="kpi-label">香烟占比</div><div class="kpi-value">'+(allAmt? (allCigAmt/allAmt*100).toFixed(1):'0.0')+'%</div><div class="kpi-sub">香烟销售额 '+sy11fmt(allCigAmt)+'</div></div>';
+    // 分类聚合
+    var catMap = {};
+    rows.forEach(function(r){ var c=r.categoryName||'未分类'; if(!catMap[c]) catMap[c]={amt:0,cnt:0}; catMap[c].amt+=r.amount; catMap[c].cnt+=r.count; });
+    var cats = Object.keys(catMap).sort(function(a,b){ return catMap[b].amt-catMap[a].amt; });
+    var ctxC = document.getElementById('chartSy11Cat');
+    if (ctxC && typeof Chart !== 'undefined') {
+      if (sy11CatChart) sy11CatChart.destroy();
+      sy11CatChart = new Chart(ctxC, {
+        type:'doughnut',
+        data:{ labels:cats, datasets:[{ data:cats.map(function(c){return Math.round(catMap[c].amt*100)/100;}), backgroundColor:cats.map(function(c,i){return CAT_PALETTE[i%CAT_PALETTE.length];}), borderWidth:1, borderColor:'#fff' }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{position:'right',labels:{font:{size:11},boxWidth:12}},
+            tooltip:{callbacks:{label:function(c){ var v=c.parsed; var p=totAmt? (v/totAmt*100).toFixed(1):'0'; return c.label+': '+sy11fmt(v)+' ('+p+'%)'; }}} },
+          cutout:'55%' }
+      });
+    }
+    // 明细表（按 分类||商品 聚合）
+    var gMap = {};
+    rows.forEach(function(r){
+      var k=(r.categoryName||'未分类')+'||'+(r.goodsName||'未知');
+      if(!gMap[k]) gMap[k]={cat:r.categoryName||'未分类',name:r.goodsName||'未知',amt:0,cnt:0};
+      gMap[k].amt+=r.amount; gMap[k].cnt+=r.count;
+    });
+    var gArr = Object.keys(gMap).map(function(k){return gMap[k];});
+    gArr.sort(function(a,b){return b.amt-a.amt;});
+    var th = '<thead><tr><th>商品分类</th><th>商品名称</th><th>平均价格</th><th>数量</th><th>金额</th><th>占比</th></tr></thead><tbody>';
+    gArr.forEach(function(g){
+      var avg=g.cnt? (g.amt/g.cnt):0;
+      var pct=totAmt? (g.amt/totAmt*100).toFixed(1):'0.0';
+      th += '<tr><td>'+g.cat+'</td><td>'+g.name+'</td><td>'+sy11fmt(avg)+'</td><td>'+Math.round(g.cnt)+'</td><td>'+sy11fmt(g.amt)+'</td><td>'+pct+'%</td></tr>';
+    });
+    th += '<tr style="font-weight:700;background:var(--primary-light)"><td colspan="3">合计</td><td>'+Math.round(totCnt)+'</td><td>'+sy11fmt(totAmt)+'</td><td>100%</td></tr>';
+    th += '</tbody>';
+    var tbl = document.getElementById('sy11Table'); if(tbl) tbl.innerHTML = th;
+    renderSy11Cig();
+  }
+  function renderSy11Cig() {
+    var note = document.getElementById('sy11CigNote');
+    if (!D.room_sy11 || !D.room_sy11.length) return;
+    var mSel = document.getElementById('sy11CigMonth');
+    var m = mSel ? (+mSel.value) : 0;
+    if (!m) { if(note) note.textContent='请选择对比月份'; return; }
+    if (note) note.textContent = (m+'月 各年份香烟销售金额对比');
+    var cigRows = D.room_sy11.filter(function(r){ return r.isCig && r.month===m; });
+    var brands={}, years={};
+    cigRows.forEach(function(r){ var b=r.cigBrand||r.goodsName; brands[b]=1; years[r.year]=1; });
+    var bList = Object.keys(brands).sort(function(a,b2){
+      var sa=0, sb=0;
+      cigRows.forEach(function(r){ var bb=r.cigBrand||r.goodsName; if(bb===a) sa+=r.amount; if(bb===b2) sb+=r.amount; });
+      return sb-sa;
+    });
+    var yList = Object.keys(years).map(Number).sort();
+    var datasets = yList.map(function(y){
+      var color = YEAR_PALETTE[y] || ('hsl('+(y%360)+',55%,48%)');
+      return { label:y+'年',
+        data:bList.map(function(b){ var s=0; cigRows.forEach(function(r){ if(r.year===y && (r.cigBrand||r.goodsName)===b) s+=r.amount; }); return Math.round(s*100)/100; }),
+        backgroundColor:color, borderRadius:4 };
+    });
+    var ctx = document.getElementById('chartSy11Cig');
+    if (ctx && typeof Chart !== 'undefined') {
+      if (sy11CigChart) sy11CigChart.destroy();
+      sy11CigChart = new Chart(ctx, {
+        type:'bar',
+        data:{ labels:bList, datasets:datasets },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{position:'top'}, tooltip:{callbacks:{label:function(c){ return c.dataset.label+': '+sy11fmt(c.parsed.y); }}} },
+          scales:{ y:{ beginAtZero:true, ticks:{callback:function(v){return '¥'+v;}} } } }
+      });
+    }
+    var th = '<thead><tr><th>香烟品牌</th>'+yList.map(function(y){return '<th>'+y+'年</th>';}).join('')+'<th>合计</th></tr></thead><tbody>';
+    bList.forEach(function(b){
+      var row='<td>'+b+'</td>', sum=0;
+      yList.forEach(function(y){ var s=0; cigRows.forEach(function(r){ if(r.year===y && (r.cigBrand||r.goodsName)===b) s+=r.amount; }); sum+=s; row+='<td>'+sy11fmt(s)+'</td>'; });
+      row+='<td><b>'+sy11fmt(sum)+'</b></td>';
+      th+='<tr>'+row+'</tr>';
+    });
+    th+='</tbody>';
+    var t=document.getElementById('sy11CigTable'); if(t) t.innerHTML=th;
+  }
+
   return {
     switchSub: switchSub,
     search: search, goPage: goPage, del: del,
@@ -12269,7 +12256,8 @@ var rmSub = (function() {
     resetData: resetData,
     loadCodes: loadCodes, loadTgtYears: loadTgtYears,
     renderRoomTgt: renderRoomTgt,
-    expTbl: expTbl
+    expTbl: expTbl,
+    renderSy11: renderSy11, renderSy11Cig: renderSy11Cig, initSy11Filters: initSy11Filters
   };
 })();
 
@@ -13242,6 +13230,35 @@ const KitchenCost = (function(){
     if(pg&&pg.classList.contains("active"))render();
     statusBanner("🧹 已清空【"+mk+"】本地 + 云端数据，可重新上传该月序时簿。","info");
   }
+  // v20260907-3：一键备份本地厨房成本数据到云端（GET existing → 月级合并 → POST save_meta）。
+  // 背景：kitchen_cost 默认不自动上云（cloudSave 显式跳过），换浏览器/换域名（如 GitHub Pages）看不到数据。
+  // 云端其他字段原样保留，仅月级合并 kitchen_cost / kitchen_cost_raw，本地月份覆盖云端同月。
+  async function backupToCloud(){
+    const months=Object.keys(DATA);
+    if(!months.length){ statusBanner("⚠️ 本地没有厨房成本数据可备份。","error"); return; }
+    statusBanner("☁ 正在备份 "+months.length+" 个月（"+months.join("、")+"）厨房成本到云端…","info");
+    try{
+      if(typeof CLOUD_API_URL==="undefined"||!CLOUD_API_URL) throw new Error("CLOUD_API_URL 未配置");
+      let existing={};
+      try{
+        const r=await fetch(CLOUD_API_URL,{method:'GET',headers:{'x-api-key':CLOUD_API_KEY}});
+        if(r.ok){ const result=await r.json(); if(result&&result.data) existing=result.data; }
+      }catch(e){ console.warn('[厨房成本] 获取云端数据失败:',e); }
+      const payload=Object.assign({},existing); // 保留云端全部其他字段，绝不覆盖
+      const kcCloud=(existing.kitchen_cost&&typeof existing.kitchen_cost==="object")?existing.kitchen_cost:{};
+      const kcrCloud=(existing.kitchen_cost_raw&&typeof existing.kitchen_cost_raw==="object")?existing.kitchen_cost_raw:{};
+      months.forEach(mk=>{ kcCloud[mk]=DATA[mk]; if(RAW[mk]) kcrCloud[mk]=RAW[mk]; });
+      payload.kitchen_cost=kcCloud;
+      payload.kitchen_cost_raw=kcrCloud;
+      const resp=await fetch(CLOUD_API_URL+'?action=save_meta',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':CLOUD_API_KEY},body:JSON.stringify(payload)});
+      const result=await resp.json();
+      if(!result.success) throw new Error(result.error||'save failed');
+      statusBanner("✅ 已备份 "+months.length+" 个月厨房成本到云端。其他浏览器/地址打开会自动恢复。","success");
+    }catch(e){
+      console.error("[厨房成本] 云端备份失败:",e);
+      statusBanner("❌ 云端备份失败："+(e&&e.message?e.message:"未知错误")+"。数据仍保存在本浏览器，可稍后重试。","error");
+    }
+  }
   function setDATA(obj, rawObj){
     if(obj&&typeof obj==="object"){DATA=JSON.parse(JSON.stringify(obj));}
     if(rawObj&&typeof rawObj==="object"){RAW=JSON.parse(JSON.stringify(rawObj));}
@@ -13279,7 +13296,7 @@ const KitchenCost = (function(){
     const pg=document.getElementById("fbpg-kitchen");
     if(pg&&pg.classList.contains("active"))render();
   }
-  return {getDATA,getRAW,setDATA,render,handleUpload,init,clearAll,clearMonth,refreshClearMonthSel};
+  return {getDATA,getRAW,setDATA,render,handleUpload,init,clearAll,clearMonth,refreshClearMonthSel,backupToCloud};
 })();
 window.KitchenCost = KitchenCost;
 KitchenCost.init();
