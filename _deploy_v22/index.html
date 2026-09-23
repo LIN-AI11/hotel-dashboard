@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260904-1">
-<title>酒店经营分析看板 V20260904-1</title>
+<meta name="build-version" content="V20260907-5">
+<title>酒店经营分析看板 V20260907-5</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1456,7 +1456,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260904-1</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260907-5</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1969,6 +1969,7 @@ html { scroll-behavior: smooth; }
       <div class="fb-form-row" style="margin:0">
         <label>月份</label>
         <select id="kc_cmSel" onchange="KitchenCost.render()"></select>
+        <button class="fb-action-btn primary" onclick="KitchenCost.backupToCloud()" title="把本浏览器的厨房成本数据备份到云端，其他设备/地址打开可自动恢复">☁ 备份到云端</button>
       </div>
     </div>
     <div id="kc_upStatus" class="up-status" style="display:none"></div>
@@ -8708,6 +8709,16 @@ var fbSub = (function() {
     });
   }
 
+  // v20260907：S(fb_sales) 的 y 字段归一化——旧 localStorage 可能存 "2024"(无"年")，
+  // 统一成 "2024年"，与 MS/ORIG_MS 的 key 格式一致，根治年份筛选下拉出现两条重复项。
+  // 复用全局 normYrKey：剔除"年"与非数字后强制补"年"，高鲁棒性。
+  function _normS() {
+    if (!S || !Array.isArray(S)) return;
+    S.forEach(function(d) {
+      if (d && d.y != null) d.y = normYrKey(d.y);
+    });
+  }
+
   var PTS = ['早餐划拨','早餐','中餐包房','中餐散台','自助餐厅','宴会','会议','送餐','茶室','大堂吧','散餐','餐厅赔偿','其他'];
   var COL = CHART_PALETTE;
   var MO = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -8776,6 +8787,8 @@ var fbSub = (function() {
     ORIG_TD_ACT = JSON.parse(JSON.stringify(TD_ACT));
     ORIG_MS = JSON.parse(JSON.stringify(MS));
     _normMS(); // v20260807-6: MS 数字 yr key 镜像,详见 _normMS 注释
+    _normS();  // v20260907：归一化 S 的 y 字段（"2024"→"2024年"），根治年份筛选重复项
+    try { saveData(); } catch(e) {} // v20260907：立即可持久化干净数据，避免下次加载又读回脏 localStorage
 
   }
   function saveData() {
@@ -8832,10 +8845,13 @@ var fbSub = (function() {
   // ===== FILTERS =====
   function initFilters() {
     var yrs = [];
-    S.forEach(function(d) { if (d.y && !yrs.includes(d.y)) yrs.push(d.y); });
+    // v20260907-2：归一化候选年份后再去重——根治 _normMS 数字镜像("2024")与字符串("2024年")
+    // 并存导致下拉出现两条。S/MS/ORIG_MS 三源全部走 _pushYr 归一化入 yrs（复用全局 normYrKey）。
+    function _pushYr(y) { if (!y) return; var ny = normYrKey(y); if (!yrs.includes(ny)) yrs.push(ny); }
+    S.forEach(function(d) { _pushYr(d.y); });
     // 合并 MS 月度营收汇总的年份
-    if (MS) Object.keys(MS).forEach(function(y) { if (y && !yrs.includes(y)) yrs.push(y); });
-    if (ORIG_MS) Object.keys(ORIG_MS).forEach(function(y) { if (y && !yrs.includes(y)) yrs.push(y); });
+    if (MS) Object.keys(MS).forEach(_pushYr);
+    if (ORIG_MS) Object.keys(ORIG_MS).forEach(_pushYr);
     // 过滤掉全零的未来年份（如2027年）
     yrs = yrs.filter(function(y) {
       var hasData = S.some(function(d) { return d.y === y; });
@@ -10355,7 +10371,7 @@ var fbSub = (function() {
     var curRaw = aggBanqTblByType(yr, types, mo);
     ds.push({ label: yr, data: curRaw, backgroundColor: curPal.main, borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 });
     $('fbc19-title').textContent = '宴会使用桌数同期对比' + (moAll() ? '' : '（' + moLabel() + '）');
-    charts.fbc19 = new Chart($('fbc19'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, title: { display: true, text: '桌数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
+    charts.fbc19 = new Chart($('fbc19'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 18 } }, scales: { y: { beginAtZero: true, title: { display: true, text: '桌数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
   }
   // 宴会类型使用次数同期对比：横轴=宴会类型（与桌数图一致），纵轴=宴会次数（每条宴会记录记 1 次）
   function aggBanqCntByType(yr, types, mo) {
@@ -10382,7 +10398,7 @@ var fbSub = (function() {
     var curRaw = aggBanqCntByType(yr, types, mo);
     ds.push({ label: yr, data: curRaw, backgroundColor: curPal.main, borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 });
     $('fbc21-title').textContent = '宴会类型使用次数同期对比' + (moAll() ? '' : '（' + moLabel() + '）');
-    charts.fbc21 = new Chart($('fbc21'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
+    charts.fbc21 = new Chart($('fbc21'), { type: 'bar', data: { labels: types, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 18 } }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
   }
   // 宴席套餐点击率：横轴=H列套餐(pkg)，纵轴=次数（每条宴会记录记 1 次）。横轴固定展示所选年份里出现过的全部套餐（不随月份隐藏），按全年总次数降序
   function banqPkgOrder(years) {
@@ -10417,7 +10433,7 @@ var fbSub = (function() {
     var curRaw = aggBanqPkgCnt(yr, pkgs, mo);
     ds.push({ label: yr, data: curRaw, backgroundColor: curPal.main, borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 });
     $('fbc22-title').textContent = '宴席套餐点击率' + (moAll() ? '' : '（' + moLabel() + '）');
-    charts.fbc22 = new Chart($('fbc22'), { type: 'bar', data: { labels: pkgs, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
+    charts.fbc22 = new Chart($('fbc22'), { type: 'bar', data: { labels: pkgs, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 18 } }, scales: { y: { beginAtZero: true, title: { display: true, text: '次数' } }, x: { ticks: { font: { size: 12 } } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } } });
   }
   function rGstType(yr, mo) {
     dc('fbc12'); var f = S.filter(function(d) { return d.y === yr; }); if (!moAll()) f = f.filter(function(d) { return moMatch(d.m); });
@@ -11349,6 +11365,7 @@ var fbSub = (function() {
       if (mk) { try { MS = JSON.parse(mk); } catch(e) {} }
       var sk = localStorage.getItem('fb_sales_v3');
       if (sk) { try { S = JSON.parse(sk); } catch(e) {} }
+      _normS(); // v20260907：刷新时同步归一化 S 的 y 字段，防止云平台回灌的脏格式再次进入下拉框
       var bk = localStorage.getItem('fb_bf_v3');
       if (bk) { try { B = JSON.parse(bk); } catch(e) {} }
       var tak = localStorage.getItem('fb_ta_v3');
@@ -13242,6 +13259,35 @@ const KitchenCost = (function(){
     if(pg&&pg.classList.contains("active"))render();
     statusBanner("🧹 已清空【"+mk+"】本地 + 云端数据，可重新上传该月序时簿。","info");
   }
+  // v20260907-3：一键备份本地厨房成本数据到云端（GET existing → 月级合并 → POST save_meta）。
+  // 背景：kitchen_cost 默认不自动上云（cloudSave 显式跳过），换浏览器/换域名（如 GitHub Pages）看不到数据。
+  // 云端其他字段原样保留，仅月级合并 kitchen_cost / kitchen_cost_raw，本地月份覆盖云端同月。
+  async function backupToCloud(){
+    const months=Object.keys(DATA);
+    if(!months.length){ statusBanner("⚠️ 本地没有厨房成本数据可备份。","error"); return; }
+    statusBanner("☁ 正在备份 "+months.length+" 个月（"+months.join("、")+"）厨房成本到云端…","info");
+    try{
+      if(typeof CLOUD_API_URL==="undefined"||!CLOUD_API_URL) throw new Error("CLOUD_API_URL 未配置");
+      let existing={};
+      try{
+        const r=await fetch(CLOUD_API_URL,{method:'GET',headers:{'x-api-key':CLOUD_API_KEY}});
+        if(r.ok){ const result=await r.json(); if(result&&result.data) existing=result.data; }
+      }catch(e){ console.warn('[厨房成本] 获取云端数据失败:',e); }
+      const payload=Object.assign({},existing); // 保留云端全部其他字段，绝不覆盖
+      const kcCloud=(existing.kitchen_cost&&typeof existing.kitchen_cost==="object")?existing.kitchen_cost:{};
+      const kcrCloud=(existing.kitchen_cost_raw&&typeof existing.kitchen_cost_raw==="object")?existing.kitchen_cost_raw:{};
+      months.forEach(mk=>{ kcCloud[mk]=DATA[mk]; if(RAW[mk]) kcrCloud[mk]=RAW[mk]; });
+      payload.kitchen_cost=kcCloud;
+      payload.kitchen_cost_raw=kcrCloud;
+      const resp=await fetch(CLOUD_API_URL+'?action=save_meta',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':CLOUD_API_KEY},body:JSON.stringify(payload)});
+      const result=await resp.json();
+      if(!result.success) throw new Error(result.error||'save failed');
+      statusBanner("✅ 已备份 "+months.length+" 个月厨房成本到云端。其他浏览器/地址打开会自动恢复。","success");
+    }catch(e){
+      console.error("[厨房成本] 云端备份失败:",e);
+      statusBanner("❌ 云端备份失败："+(e&&e.message?e.message:"未知错误")+"。数据仍保存在本浏览器，可稍后重试。","error");
+    }
+  }
   function setDATA(obj, rawObj){
     if(obj&&typeof obj==="object"){DATA=JSON.parse(JSON.stringify(obj));}
     if(rawObj&&typeof rawObj==="object"){RAW=JSON.parse(JSON.stringify(rawObj));}
@@ -13279,7 +13325,7 @@ const KitchenCost = (function(){
     const pg=document.getElementById("fbpg-kitchen");
     if(pg&&pg.classList.contains("active"))render();
   }
-  return {getDATA,getRAW,setDATA,render,handleUpload,init,clearAll,clearMonth,refreshClearMonthSel};
+  return {getDATA,getRAW,setDATA,render,handleUpload,init,clearAll,clearMonth,refreshClearMonthSel,backupToCloud};
 })();
 window.KitchenCost = KitchenCost;
 KitchenCost.init();
