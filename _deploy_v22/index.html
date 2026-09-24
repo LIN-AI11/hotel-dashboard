@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260924-1">
-<title>酒店经营分析看板 V20260924-1</title>
+<meta name="build-version" content="V20260924-2">
+<title>酒店经营分析看板 V20260924-2</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1456,7 +1456,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260924-1</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260924-2</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1666,6 +1666,12 @@ html { scroll-behavior: smooth; }
             <div class="source-pie-canvas source-pie-canvas-corner"><canvas id="chartSourcePieAgreement"></canvas></div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">账户类型用房同期对比 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">间夜</span></div>
+        <div class="chart-canvas-wrap"><canvas id="chartSourceAccountType"></canvas></div>
       </div>
     </div>
     <div class="chart-grid">
@@ -6579,6 +6585,8 @@ function renderSources() {
   // 渲染 散客分析折线图及其二级分类筛选器
   renderWalkinSource2Selector();
   renderWalkinChart();
+  // 渲染账户类型用房同期对比柱状图
+  renderSourceAccountTypeBar();
   } catch (err) {
     console.error('renderRooms error:', err);
     var panel = document.getElementById('tab-rooms');
@@ -6593,6 +6601,75 @@ function renderSources() {
       msg.textContent = '数据异常：' + err.message;
     }
   }
+}
+
+// 将 source2 映射到示例图中的账户类型；未命中归入“其他”
+function getAccountType(source2) {
+  var s = (source2 || '').trim();
+  if (!s) return '其他';
+  // 按特异性从高到低匹配，避免“协议”误匹配所有协议类
+  if (s.indexOf('协议单位') >= 0 || s.indexOf('公司') >= 0) return '协议单位、公司';
+  if (s.indexOf('公务之家') >= 0) return '公务之家';
+  if (s.indexOf('旅行社') >= 0) return '旅行社';
+  if (s.indexOf('网络订房') >= 0 || s.indexOf('网络') >= 0) return '网络订房';
+  if (s.indexOf('自来散客') >= 0 || s.indexOf('散客') >= 0) return '自来散客';
+  if (s.indexOf('金樽尊享') >= 0 || s.indexOf('金樽') >= 0) return '金樽尊享';
+  if (s.indexOf('会员') >= 0) return '会员';
+  return '其他';
+}
+
+function renderSourceAccountTypeBar() {
+  dc('sourceAccountType');
+  var cv = document.getElementById('chartSourceAccountType');
+  if (!cv) return;
+  if (!D.room_raw || !D.room_raw.length) return;
+  // 与 renderSources 保持一致的筛选逻辑
+  var records = excludePartialRecords((D.room_raw || []).slice());
+  var srcYears = [];
+  if (filterState.year > 0) srcYears.push(filterState.year);
+  (filterState.compareYears || []).forEach(function(y){ var n = parseInt(y, 10); if (n > 0 && srcYears.indexOf(n) < 0) srcYears.push(n); });
+  srcYears.sort(function(a,b){ return a - b; });
+  if (srcYears.length > 0) records = records.filter(function(r){ return srcYears.indexOf(Number(r.year)) >= 0; });
+  if (filterState.month.length > 0 && filterState.month.length < 12) records = records.filter(function(r){ return filterState.month.indexOf(r.month) >= 0; });
+  if (filterState.sources.length > 0) records = records.filter(function(r){ return filterState.sources.indexOf(r.source) >= 0; });
+  if (filterState.sources2.length > 0) records = records.filter(function(r){ return filterState.sources2.indexOf(r.source2) >= 0; });
+
+  var accountTypes = ['协议单位、公司','网络订房','自来散客','金樽尊享','会员','公务之家','旅行社'];
+  var typeColors = {
+    '协议单位、公司': '#1a73e8',
+    '网络订房': '#ff6d00',
+    '自来散客': '#78909c',
+    '金樽尊享': '#f9a825',
+    '会员': '#1565c0',
+    '公务之家': '#2e9e5b',
+    '旅行社': '#00838f',
+    '其他': '#9e9e9e'
+  };
+  var dataByType = {};
+  accountTypes.concat(['其他']).forEach(function(t){ dataByType[t] = {}; });
+  records.forEach(function(r){
+    var t = getAccountType(r.source2);
+    var y = Number(r.year);
+    dataByType[t][y] = (dataByType[t][y] || 0) + (r.nights || 0);
+  });
+
+  var datasets = accountTypes.concat(['其他']).map(function(t){
+    return {
+      label: t,
+      data: srcYears.map(function(y){ return Math.round((dataByType[t][y] || 0)*10)/10; }),
+      backgroundColor: typeColors[t] || '#9e9e9e',
+      borderRadius: 3
+    };
+  });
+
+  charts.sourceAccountType = new Chart(cv, {
+    type: 'bar',
+    data: { labels: srcYears.map(function(y){ return y+'年'; }), datasets: datasets },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(c){ return c.dataset.label+': '+fmt(c.parsed.y,1)+' 间夜'; } } } },
+      scales: { x: { ticks: { font: { size: 12 } } }, y: { beginAtZero: true, title: { display: true, text: '间夜数' }, ticks: { callback: function(v){ return fmt(v,0); } } } }
+    }
+  });
 }
 
 // ============= 客源分析趋势图统一渲染（协议/OTA/散客共用） =============
