@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260923-4">
-<title>酒店经营分析看板 V20260923-4</title>
+<meta name="build-version" content="V20260924-1">
+<title>酒店经营分析看板 V20260924-1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1456,7 +1456,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260923-4</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260924-1</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1758,8 +1758,9 @@ html { scroll-behavior: smooth; }
     <div id="sy11ErrBanner"></div>
     <!-- 控制条 -->
     <div class="fb-filter-bar" id="sy11FilterBar">
-      <label>年份</label><span class="cmp-chk-group" id="sy11Years"></span>
+      <label>年份</label><select id="sy11Year" onchange="rmSub.renderSy11()"></select>
       <label>月份</label><span class="cmp-chk-group" id="sy11Months"></span>
+      <span class="cmp-chk-group" id="sy11CmpYears"></span>
       <label class="inc-partial"><input type="checkbox" id="sy11OnlyCig" onchange="rmSub.renderSy11()"> 仅看香烟</label>
       <label class="inc-partial"><input type="checkbox" id="sy11ExcCig" onchange="rmSub.renderSy11()" checked> 排除香烟</label>
       <button class="mini-btn" onclick="rmSub.renderSy11()">刷新</button>
@@ -12112,19 +12113,14 @@ var rmSub = (function() {
   }
   function initSy11Filters() {
     var years = sy11YearsAvail();
-    var sel = document.getElementById('sy11Years');
-    if (sel) {
-      var cur = (years.length ? years[years.length - 1] : new Date().getFullYear());
-      sel.innerHTML = years.map(function(y){
-        return '<label class="chk"><input type="checkbox" value="'+y+'" '+(y===cur?'checked':'')+'> '+y+'</label>';
-      }).join('');
+    var ysel = document.getElementById('sy11Year');
+    if (ysel) {
+      ysel.innerHTML = '';
+      years.forEach(function(y){ ysel.innerHTML += '<option value="'+y+'">'+y+'年</option>'; });
+      if (years.length) ysel.value = years[years.length - 1];
     }
-    var msel = document.getElementById('sy11Months');
-    if (msel) {
-      var ms = '';
-      for (var m=1; m<=12; m++) ms += '<label class="chk"><input type="checkbox" value="'+m+'" checked> '+m+'月</label>';
-      msel.innerHTML = ms;
-    }
+    buildMonthCheckboxGroup('sy11Months', 'rmSub.renderSy11()');
+    if (years.length) buildCompareCheckboxGroup('sy11CmpYears', years.slice().sort(function(a,b){return a-b;}), 'rmSub.renderSy11()');
     var csel = document.getElementById('sy11CigMonth');
     if (csel) {
       var cm = '<option value="">— 选择对比月份 —</option>';
@@ -12133,10 +12129,11 @@ var rmSub = (function() {
     }
   }
   function getSy11Sel() {
-    var ys = [], ms = [];
-    document.querySelectorAll('#sy11Years input:checked').forEach(function(c){ ys.push(+c.value); });
-    document.querySelectorAll('#sy11Months input:checked').forEach(function(c){ ms.push(+c.value); });
-    return { years: ys, months: ms };
+    var ysel = document.getElementById('sy11Year');
+    var year = ysel ? (parseInt(ysel.value, 10) || 0) : 0;
+    var months = getM('sy11Months').map(function(s){ return parseInt(s, 10); });
+    var compareYears = readCompareYears('sy11CmpYears', year).map(function(y){ return parseInt(y, 10); });
+    return { year: year, months: months, compareYears: compareYears, years: [year].concat(compareYears) };
   }
   function sy11fmt(v) {
     return '¥' + (Math.round(v*100)/100).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -12153,10 +12150,14 @@ var rmSub = (function() {
     var sel = getSy11Sel();
     var onlyCig = document.getElementById('sy11OnlyCig') && document.getElementById('sy11OnlyCig').checked;
     var excCig = document.getElementById('sy11ExcCig') && document.getElementById('sy11ExcCig').checked;
-    // 全量（仅按年月筛选）用于计算香烟占比，避免“排除香烟”勾选后该 KPI 变成 0% 失去参考意义
+    // 统一按数字类型做年份/月份比较，避免 JSON 中字符串类型导致筛选失效
+    function _sy11Year(r){ return parseInt(r.year, 10) || 0; }
+    function _sy11Month(r){ return parseInt(r.month, 10) || 0; }
+    // 全量（按当前年份+选中月份）用于计算香烟占比，避免“排除香烟”勾选后该 KPI 变成 0% 失去参考意义
     var allRows = D.room_sy11.filter(function(r){
-      if (sel.years.length && sel.years.indexOf(r.year) < 0) return false;
-      if (sel.months.length && sel.months.indexOf(r.month) < 0) return false;
+      var ry = _sy11Year(r), rm = _sy11Month(r);
+      if (sel.year && ry !== sel.year) return false;
+      if (sel.months.length && sel.months.indexOf(rm) < 0) return false;
       return true;
     });
     var allAmt=0, allCigAmt=0;
@@ -12214,11 +12215,17 @@ var rmSub = (function() {
   function renderSy11Cig() {
     var note = document.getElementById('sy11CigNote');
     if (!D.room_sy11 || !D.room_sy11.length) return;
+    var sel = getSy11Sel();
+    var activeYears = [sel.year].concat(sel.compareYears).filter(function(y){ return y > 0; });
     var mSel = document.getElementById('sy11CigMonth');
     var m = mSel ? (+mSel.value) : 0;
     if (!m) { if(note) note.textContent='请选择对比月份'; return; }
     if (note) note.textContent = (m+'月 各年份香烟销售金额对比');
-    var cigRows = D.room_sy11.filter(function(r){ return r.isCig && r.month===m; });
+    var cigRows = D.room_sy11.filter(function(r){
+      var ry = parseInt(r.year, 10) || 0;
+      var rm = parseInt(r.month, 10) || 0;
+      return r.isCig && rm===m && activeYears.indexOf(ry) >= 0;
+    });
     var brands={}, years={};
     cigRows.forEach(function(r){ var b=r.cigBrand||r.goodsName; brands[b]=1; years[r.year]=1; });
     var bList = Object.keys(brands).sort(function(a,b2){
@@ -12230,7 +12237,7 @@ var rmSub = (function() {
     var datasets = yList.map(function(y){
       var color = YEAR_PALETTE[y] || ('hsl('+(y%360)+',55%,48%)');
       return { label:y+'年',
-        data:bList.map(function(b){ var s=0; cigRows.forEach(function(r){ if(r.year===y && (r.cigBrand||r.goodsName)===b) s+=r.amount; }); return Math.round(s*100)/100; }),
+        data:bList.map(function(b){ var s=0; cigRows.forEach(function(r){ if((parseInt(r.year,10)||0)===y && (r.cigBrand||r.goodsName)===b) s+=r.amount; }); return Math.round(s*100)/100; }),
         backgroundColor:color, borderRadius:4 };
     });
     var ctx = document.getElementById('chartSy11Cig');
@@ -12249,16 +12256,12 @@ var rmSub = (function() {
     var el = document.getElementById('chartSy11Trend');
     if (!el) return;
     if (!D.room_sy11 || !D.room_sy11.length) return;
-    // 趋势轴 = 选中年份范围内的所有月份（按时间排序）。月份多选不参与趋势轴。
     var sel = getSy11Sel();
-    var years = (sel.years && sel.years.length) ? sel.years : sy11YearsAvail();
-    var ymSet = {};
-    D.room_sy11.forEach(function(r){ if (years.indexOf(r.year) >= 0) ymSet[r.ym] = 1; });
-    var yms = Object.keys(ymSet).sort();
+    var activeYears = [sel.year].concat(sel.compareYears).filter(function(y){ return y > 0; });
+    if (!activeYears.length) activeYears = sy11YearsAvail();
     function isBed(r){ var n=(r.goodsName||''); return n==='加床费' || n.indexOf('加床')>=0; }
     function isPet(r){ return (r.goodsName||'').indexOf('宠物清洁')>=0; }
-    var net = yms.map(function(ym){
-      var rows = D.room_sy11.filter(function(r){ return r.ym===ym; });
+    function netAmount(rows){
       var total=0, cig=0, bed=0, pet=0;
       rows.forEach(function(r){
         var a = r.amount||0; total += a;
@@ -12267,21 +12270,35 @@ var rmSub = (function() {
         else if (isPet(r)) pet += a;
       });
       return Math.round((total - cig - bed - pet)*100)/100;
+    }
+    var xLabels = moAxis('sy11Months');
+    var xNums = moNums('sy11Months').map(function(s){ return parseInt(s, 10); });
+    if (!xNums.length) xNums = [1,2,3,4,5,6,7,8,9,10,11,12];
+    var datasets = activeYears.map(function(y){
+      var color = YEAR_PALETTE[y] || ('hsl('+(y%360)+',55%,48%)');
+      return {
+        label: y+'年',
+        data: xNums.map(function(m){
+          var rows = D.room_sy11.filter(function(r){
+            return (parseInt(r.year,10)||0) === y && (parseInt(r.month,10)||0) === m;
+          });
+          return netAmount(rows);
+        }),
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.3,
+        fill: false
+      };
     });
     if (sy11TrendChart) sy11TrendChart.destroy();
     sy11TrendChart = new Chart(el, {
       type:'line',
-      data:{ labels:yms, datasets:[{
-        label:'净销售额（不含香烟/加床费/宠物清洁费）',
-        data:net,
-        borderColor:'#12877D',
-        backgroundColor:'rgba(18,135,125,0.12)',
-        borderWidth:2, pointRadius:3, pointBackgroundColor:'#12877D',
-        fill:true, tension:0.3
-      }] },
+      data:{ labels:xLabels, datasets:datasets },
       options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false},
-          tooltip:{ callbacks:{ label:function(c){ return c.label+': '+sy11fmt(c.parsed.y); } } } },
+        plugins:{ legend:{display:true, position:'top'},
+          tooltip:{ callbacks:{ label:function(c){ return c.dataset.label+' '+c.label+': '+sy11fmt(c.parsed.y); } } } },
         scales:{
           x:{ ticks:{ maxRotation:60, minRotation:45, font:{size:10} }, grid:{display:false} },
           y:{ beginAtZero:true, ticks:{ callback:function(v){ return '¥'+v; } }, title:{display:true,text:'净销售额'} }
