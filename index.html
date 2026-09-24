@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260924-3">
-<title>酒店经营分析看板 V20260924-3</title>
+<meta name="build-version" content="V20260924-4">
+<title>酒店经营分析看板 V20260924-4</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -665,7 +665,7 @@ body {
   padding: 8px 4px 4px;
 }
 .biz-pie-side {
-  flex: 0 0 240px;
+  flex: 0 0 280px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -698,9 +698,10 @@ body {
 }
 .biz-pie-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   font-size: 13px;
+  padding: 2px 0;
 }
 .biz-pie-rank {
   width: 22px;
@@ -714,15 +715,17 @@ body {
   font-weight: 700;
   font-size: 12px;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 .biz-pie-name {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
   color: var(--text);
   font-weight: 500;
+  line-height: 1.35;
 }
 .biz-pie-bar {
   flex: 0 0 70px;
@@ -730,6 +733,8 @@ body {
   background: var(--border);
   border-radius: 4px;
   overflow: hidden;
+  margin-top: 5px;
+  flex-shrink: 0;
 }
 .biz-pie-bar span {
   display: block;
@@ -743,6 +748,8 @@ body {
   color: var(--text-secondary);
   font-weight: 600;
   font-size: 12px;
+  margin-top: 3px;
+  flex-shrink: 0;
 }
 @media (max-width: 1100px) {
   .biz-pie-body { flex-direction: column; }
@@ -1552,7 +1559,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260924-3</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260924-4</span>
     </div>
     <div class="header-actions">
     </div>
