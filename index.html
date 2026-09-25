@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260925-3">
-<title>酒店经营分析看板 V20260925-3</title>
+<meta name="build-version" content="V20260925-4">
+<title>酒店经营分析看板 V20260925-4</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -929,6 +929,15 @@ body {
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .data-table .pct { color: var(--primary); font-weight: 600; }
 
+/* 小商品销售明细表：列宽均分，内容居中 */
+.sy11-table-wrap { max-height: 440px; overflow: auto; border-radius: var(--radius); }
+.sy11-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.sy11-table th,
+.sy11-table td { width: 16.66%; text-align: center; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: normal; word-break: break-word; vertical-align: middle; }
+.sy11-table th { background: var(--surface-alt); font-weight: 600; color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.sy11-table tbody tr:nth-child(even) { background: #f8fafc; }
+.sy11-table tbody tr:hover { background: var(--primary-light); }
+
 /* 客房月度指标表 — 参考餐饮分销售点月度营收明细表风格：组内紧凑、组间竖线、标题居中 */
 #roomMonthlyWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 12px; }
 #roomMonthlyTable { table-layout: auto; border: none; min-width: max-content; }
@@ -1559,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260925-3</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260925-4</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1885,13 +1894,6 @@ html { scroll-behavior: smooth; }
     </div>
     <!-- KPI -->
     <div class="kpi-grid" id="sy11KPIs"></div>
-    <!-- 销售明细 -->
-    <div class="chart-card" style="margin-top:16px;">
-      <div class="chart-title">小商品销售明细 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">按金额降序</span></div>
-      <div style="max-height:440px;overflow:auto;">
-        <table class="fb-table" id="sy11Table"></table>
-      </div>
-    </div>
     <!-- 香烟专项 -->
     <div class="chart-card" style="margin-top:16px;">
       <div class="chart-title">香烟销售分析 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">数据源：别样红SY11</span></div>
@@ -1904,6 +1906,13 @@ html { scroll-behavior: smooth; }
         净销售额 = 当月小商品总额 − 香烟销售额 − 加床费 − 宠物清洁费（横轴为月份，随上方年份筛选变化）
       </div>
       <div class="chart-canvas-wrap tall"><canvas id="chartSy11Trend"></canvas></div>
+    </div>
+    <!-- 销售明细 -->
+    <div class="chart-card" style="margin-top:16px;">
+      <div class="chart-title">小商品销售明细 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">按金额降序</span></div>
+      <div class="sy11-table-wrap">
+        <table class="fb-table sy11-table" id="sy11Table"></table>
+      </div>
     </div>
   </div>
   <!-- Room Sub-Page: 数据管理 -->
