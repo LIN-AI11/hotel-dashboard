@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260925-1">
-<title>酒店经营分析看板 V20260925-1</title>
+<meta name="build-version" content="V20260925-2">
+<title>酒店经营分析看板 V20260925-2</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1559,7 +1559,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260925-1</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260925-2</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1901,11 +1901,6 @@ html { scroll-behavior: smooth; }
     <!-- 香烟专项 -->
     <div class="chart-card" style="margin-top:16px;">
       <div class="chart-title">香烟销售分析 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">数据源：别样红SY11</span></div>
-      <div class="fb-filter-bar" style="margin:6px 0 10px;">
-        <label>对比月份</label>
-        <select id="sy11CigMonth" onchange="rmSub.renderSy11Cig()"></select>
-        <span class="cnt" id="sy11CigNote" style="color:var(--text-secondary);font-size:12px;"></span>
-      </div>
       <div class="chart-canvas-wrap"><canvas id="chartSy11Cig"></canvas></div>
     </div>
     <!-- 净销售额趋势（不含香烟/加床费/宠物清洁费） -->
@@ -12312,12 +12307,6 @@ var rmSub = (function() {
     }
     buildMonthCheckboxGroup('sy11Months', 'rmSub.renderSy11()');
     if (years.length) buildCompareCheckboxGroup('sy11CmpYears', years.slice().sort(function(a,b){return a-b;}), 'rmSub.renderSy11()');
-    var csel = document.getElementById('sy11CigMonth');
-    if (csel) {
-      var cm = '<option value="">— 选择对比月份 —</option>';
-      for (var m2=1; m2<=12; m2++) cm += '<option value="'+m2+'" '+(m2===8?'selected':'')+'>'+m2+'月</option>';
-      csel.innerHTML = cm;
-    }
   }
   function getSy11Sel() {
     var ysel = document.getElementById('sy11Year');
@@ -12404,18 +12393,14 @@ var rmSub = (function() {
     renderSy11Trend();
   }
   function renderSy11Cig() {
-    var note = document.getElementById('sy11CigNote');
     if (!D.room_sy11 || !D.room_sy11.length) return;
     var sel = getSy11Sel();
     var activeYears = [sel.year].concat(sel.compareYears).filter(function(y){ return y > 0; });
-    var mSel = document.getElementById('sy11CigMonth');
-    var m = mSel ? (+mSel.value) : 0;
-    if (!m) { if(note) note.textContent='请选择对比月份'; return; }
-    if (note) note.textContent = (m+'月 各年份香烟销售金额对比');
+    var activeMonths = (sel.months && sel.months.length) ? sel.months : [];
     var cigRows = D.room_sy11.filter(function(r){
       var ry = parseInt(r.year, 10) || 0;
       var rm = parseInt(r.month, 10) || 0;
-      return r.isCig && rm===m && activeYears.indexOf(ry) >= 0;
+      return r.isCig && activeYears.indexOf(ry) >= 0 && (activeMonths.length === 0 || activeMonths.indexOf(rm) >= 0);
     });
     var brands={}, years={};
     cigRows.forEach(function(r){ var b=r.cigBrand||r.goodsName; brands[b]=1; years[r.year]=1; });
