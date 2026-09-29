@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260929-5">
-<title>酒店经营分析看板 V20260929-5</title>
+<meta name="build-version" content="V20260929-6">
+<title>酒店经营分析看板 V20260929-6</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1568,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-5</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-6</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1838,6 +1838,14 @@ html { scroll-behavior: smooth; }
           <span id="walkinSource2Selector" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;"></span>
         </div>
         <div class="chart-canvas-wrap"><canvas id="chartWalkin"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">
+          <span>时租房分析 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">入住类型=时租</span></span>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartHourly"></canvas></div>
       </div>
     </div>
   </div>
@@ -6707,6 +6715,8 @@ function renderSources() {
   // 渲染 散客分析折线图及其二级分类筛选器
   renderWalkinSource2Selector();
   renderWalkinChart();
+  // 渲染 时租房分析折线图（入住类型=时租）
+  renderHourlyChart();
   // 渲染账户类型用房同期对比柱状图
   renderSourceAccountTypeBar();
   } catch (err) {
@@ -7125,6 +7135,98 @@ function renderWalkinSource2Selector() {
 
 function renderWalkinChart(type) {
   renderSourceTrendChart('chartWalkin', 'walkin', '散客', walkinSource2, type, renderWalkinChart);
+}
+
+// ============= 时租房分析折线图（入住类型=时租，按月份聚合间夜数） =============
+function renderHourlyChart(type) {
+  try {
+    var canvasId = 'chartHourly';
+    var chartKey = 'hourly';
+    var ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    if (charts[chartKey]) { charts[chartKey].destroy(); charts[chartKey] = null; }
+
+    var years = [];
+    if (filterState.year > 0) years.push(filterState.year);
+    (filterState.compareYears || []).forEach(function(y){
+      var n = parseInt(y, 10);
+      if (n > 0 && years.indexOf(n) < 0) years.push(n);
+    });
+    years.sort(function(a, b){ return a - b; });
+    if (years.length === 0) {
+      setChartState(canvasId, 'empty', '当前筛选条件下暂无数据');
+      return;
+    }
+
+    // 默认排除进行中月份，与客房其他图保持一致
+    var recordsAll = excludePartialRecords(D.room_raw || []);
+    function aggForYear(yr) {
+      return recordsAll.filter(function(r){ return Number(r.year) === yr && r.checkin_type === '时租'; });
+    }
+
+    var months = [];
+    if (filterState.month.length > 0 && filterState.month.length < 12) {
+      months = filterState.month.slice().sort(function(a, b){ return a - b; });
+    } else {
+      for (var i = 1; i <= 12; i++) months.push(i);
+    }
+    var labels = months.map(function(m){ return m + '月'; });
+
+    var curType = type || window.__chartType[canvasId] || 'line';
+    var colors = CHART_PALETTE;
+    var datasets = years.map(function(yr, idx){
+      var recs = aggForYear(yr);
+      var data = months.map(function(m){
+        var monthRecs = recs.filter(function(r){ return r.month === m; });
+        if (monthRecs.length === 0) return null;
+        return monthRecs.reduce(function(s, r){ return s + (r.nights || 0); }, 0);
+      });
+      var c = colors[idx % colors.length];
+      var ds = {
+        label: yr + '年 时租房',
+        data: data,
+        borderColor: c,
+        backgroundColor: curType === 'bar' ? c : 'transparent',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: false,
+        tension: 0.3,
+        spanGaps: false
+      };
+      if (curType === 'bar') { ds.borderWidth = 0; ds.borderRadius = 6; ds.maxBarThickness = 46; }
+      return ds;
+    });
+
+    charts[chartKey] = new Chart(ctx, {
+      type: curType,
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { title: { display: true, text: '间夜数' }, beginAtZero: true, ticks: { callback: function(v){ return fmt(v, 1); } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          x: { grid: { display: false } }
+        },
+        plugins: {
+          legend: { display: true, position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){ return ctx.dataset.label + '：' + fmt(ctx.parsed.y, 1) + ' 间夜'; }
+            }
+          }
+        }
+      }
+    });
+
+    registerChartTypeToggle(canvasId, renderHourlyChart, [
+      { type: 'line', label: '线' },
+      { type: 'bar', label: '柱' }
+    ]);
+  } catch (err) {
+    console.error('renderHourlyChart error:', err);
+    setChartState('chartHourly', 'error', '数据异常：' + err.message);
+  }
 }
 
 // ============= 公务VS商务占比饼图（罗玉梅 · 协议，按 AA 列「公务或商务类型」） =============
