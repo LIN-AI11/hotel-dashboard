@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260925-4">
-<title>酒店经营分析看板 V20260925-4</title>
+<meta name="build-version" content="V20260929-1">
+<title>酒店经营分析看板 V20260929-1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1568,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260925-4</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-1</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1811,6 +1811,15 @@ html { scroll-behavior: smooth; }
             <div class="biz-pie-list" id="bizTopGovList"></div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">
+          <span>市场代码间夜分析 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">Z列</span></span>
+          <span id="mktCodeBizFilter" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;"></span>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartMktCode"></canvas></div>
       </div>
     </div>
     <div class="chart-grid">
@@ -6689,6 +6698,9 @@ function renderSources() {
   renderAgreementChart();
   // 渲染 公务VS商务 占比饼图（罗玉梅）
   renderBizPie();
+  // 渲染市场代码间夜分析（Z列，按AA列公务/商务筛选）
+  buildMktCodeBizFilter();
+  renderMktCodeChart();
   // 渲染 OTA 分析折线图及其二级分类筛选器
   renderOtaSource2Selector();
   renderOtaChart();
@@ -6763,6 +6775,118 @@ function renderSourceAccountTypeBar() {
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(c){ return c.dataset.label+' '+c.label+': '+fmt(c.parsed.y,1)+' 间夜'; } } } },
       scales: { x: { ticks: { font: { size: 12 } } }, y: { beginAtZero: true, title: { display: true, text: '间夜数' }, ticks: { callback: function(v){ return fmt(v,0); } } } }
+    }
+  });
+}
+
+// ============= 市场代码间夜分析（Z列，按AA列公务/商务筛选） =============
+let mktCodeBizFilterState = ['公务', '商务'];
+let _mktCodeBizFilterBuilt = false;
+function buildMktCodeBizFilter() {
+  if (_mktCodeBizFilterBuilt) return;
+  buildCheckboxGroup('mktCodeBizFilter', ['公务', '商务'], function() {
+    mktCodeBizFilterState = getM('mktCodeBizFilter');
+    renderMktCodeChart();
+  }, mktCodeBizFilterState);
+  _mktCodeBizFilterBuilt = true;
+}
+function renderMktCodeChart() {
+  dc('mktCode');
+  var cv = document.getElementById('chartMktCode');
+  if (!cv) return;
+  if (!D.room_raw || !D.room_raw.length) return;
+
+  // 与客源分析其他图表保持一致的筛选逻辑
+  var records = excludePartialRecords((D.room_raw || []).slice());
+  var srcYears = [];
+  if (filterState.year > 0) srcYears.push(filterState.year);
+  (filterState.compareYears || []).forEach(function(y){ var n = parseInt(y, 10); if (n > 0 && srcYears.indexOf(n) < 0) srcYears.push(n); });
+  srcYears.sort(function(a,b){ return a - b; });
+  if (srcYears.length > 0) records = records.filter(function(r){ return srcYears.indexOf(Number(r.year)) >= 0; });
+  if (filterState.month.length > 0 && filterState.month.length < 12) records = records.filter(function(r){ return filterState.month.indexOf(r.month) >= 0; });
+  if (filterState.sources.length > 0) records = records.filter(function(r){ return filterState.sources.indexOf(r.source) >= 0; });
+  if (filterState.sources2.length > 0) records = records.filter(function(r){ return filterState.sources2.indexOf(r.source2) >= 0; });
+
+  // AA列本地筛选：公务/商务
+  var cats = mktCodeBizFilterState.slice();
+  if (cats.length === 0) {
+    charts.mktCode = new Chart(cv, {
+      type: 'bar',
+      data: { labels: ['请在右上角选择公务或商务'], datasets: [{ data: [0], backgroundColor: '#cbd5e1' }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { display: false } }, scales: { x: { beginAtZero: true, title: { display: true, text: '间夜数' } }, y: {} } }
+    });
+    return;
+  }
+  records = records.filter(function(r){ return cats.indexOf(r.biz_category) >= 0; });
+
+  // 按市场代码 + 公务/商务 聚合间夜
+  var byCodeCat = {};
+  records.forEach(function(r){
+    var code = (r.mkt_code || '未填').trim() || '未填';
+    var cat = r.biz_category;
+    if (!byCodeCat[code]) byCodeCat[code] = {};
+    byCodeCat[code][cat] = (byCodeCat[code][cat] || 0) + (r.nights || 0);
+  });
+
+  // 取 total 前 15 的市场代码，其余归入“其他”
+  var codeTotals = {};
+  Object.keys(byCodeCat).forEach(function(code){
+    codeTotals[code] = cats.reduce(function(s, cat){ return s + (byCodeCat[code][cat] || 0); }, 0);
+  });
+  var entries = Object.entries(codeTotals).sort(function(a,b){ return b[1]-a[1]; });
+  var topN = 15;
+  var top = entries.slice(0, topN);
+  if (entries.length > topN) {
+    var restCodes = entries.slice(topN).map(function(e){ return e[0]; });
+    var restSum = {};
+    cats.forEach(function(cat){ restSum[cat] = 0; });
+    restCodes.forEach(function(code){
+      cats.forEach(function(cat){ restSum[cat] += (byCodeCat[code][cat] || 0); });
+    });
+    var restLabel = '其他';
+    byCodeCat[restLabel] = restSum;
+    top.push([restLabel, cats.reduce(function(s, cat){ return s + (restSum[cat] || 0); }, 0)]);
+  }
+
+  // 水平条形图：最大的在最上面 -> 数组反转
+  var labels = top.map(function(e){ return e[0]; }).reverse();
+  var catColors = { '公务': '#1a73e8', '商务': '#2e9e5b' };
+  var datasets = cats.map(function(cat){
+    return {
+      label: cat,
+      data: labels.map(function(code){ return Math.round((byCodeCat[code][cat] || 0)*10)/10; }),
+      backgroundColor: catColors[cat] || '#94a3b8',
+      borderRadius: 3
+    };
+  });
+
+  charts.mktCode = new Chart(cv, {
+    type: 'bar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        datalabels: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(c){ return c.dataset.label + ' · ' + c.label + ': ' + fmt(c.parsed.x, 1) + ' 间夜'; }
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          title: { display: true, text: '间夜数' },
+          ticks: { callback: function(v){ return fmt(v, 0); } }
+        },
+        y: {
+          ticks: { font: { size: 12 }, autoSkip: false },
+          grid: { display: false }
+        }
+      }
     }
   });
 }
