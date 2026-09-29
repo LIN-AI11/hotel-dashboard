@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260929-6">
-<title>酒店经营分析看板 V20260929-6</title>
+<meta name="build-version" content="V20260929-7">
+<title>酒店经营分析看板 V20260929-7</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1568,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-6</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-7</span>
     </div>
     <div class="header-actions">
     </div>
@@ -7161,7 +7161,7 @@ function renderHourlyChart(type) {
     // 默认排除进行中月份，与客房其他图保持一致
     var recordsAll = excludePartialRecords(D.room_raw || []);
     function aggForYear(yr) {
-      return recordsAll.filter(function(r){ return Number(r.year) === yr && r.checkin_type === '时租'; });
+      return recordsAll.filter(function(r){ return Number(r.year) === yr && r.checkin_type && r.checkin_type.indexOf('时租') >= 0; });
     }
 
     var months = [];
