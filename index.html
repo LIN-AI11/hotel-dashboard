@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260929-7">
-<title>酒店经营分析看板 V20260929-7</title>
+<meta name="build-version" content="V20260929-8">
+<title>酒店经营分析看板 V20260929-8</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1568,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-7</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-8</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1931,6 +1931,22 @@ html { scroll-behavior: smooth; }
         <table class="fb-table sy11-table" id="sy11Table"></table>
       </div>
     </div>
+    <!-- 自动售货机销售分析 -->
+    <div style="margin-top:18px;border-top:2px dashed var(--border,#e5e7eb);padding-top:18px;">
+      <div class="chart-title">自动售货机销售分析 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">数据源：云迹对账单（数据管理 TAB 上传）</span></div>
+      <div id="vendingErrBanner"></div>
+      <div class="kpi-grid" id="vendingKPIs" style="margin-top:8px;"></div>
+      <div style="margin-top:12px;">
+        <div class="chart-title">月度销售额趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">实收金额 · 随上方年份/月份筛选</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartVendingTrend"></canvas></div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="chart-title">商品销售明细 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">按实收金额降序</span></div>
+        <div class="sy11-table-wrap">
+          <table class="fb-table sy11-table" id="vendingTable"></table>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- Room Sub-Page: 数据管理 -->
   <div class="fb-page" id="rmpg-dm">
@@ -1943,6 +1959,16 @@ html { scroll-behavior: smooth; }
       </div>
       <input type="file" id="rmFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleRoomUpload(event)">
       <div id="rmImportResult" style="display:none" class="fb-import-result"></div>
+    </div>
+    <div class="fb-dm-row">
+      <h4>🛒 自动售货机对账单导入 <span class="cnt">云迹对账单（.xls/.xlsx）</span></h4>
+      <div class="fb-upload-zone" id="vendingUploadZone" onclick="document.getElementById('vendingFileInput').click()">
+        <div class="upload-icon" style="font-size:36px;margin-bottom:8px;">🤖</div>
+        <div class="upload-text">点击或拖拽导入自动售货机对账单</div>
+        <div class="upload-hint">支持 .xls/.xlsx 格式 · 25 列云迹对账单（支付方式/订单编号/商品名字/实收金额…）</div>
+      </div>
+      <input type="file" id="vendingFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleVendingUpload(event)">
+      <div id="vendingImportResult" style="display:none" class="fb-import-result"></div>
     </div>
     <div class="fb-dm-row">
       <h4>📋 客房数据 <span class="cnt" id="rmRecordCnt"></span></h4>
@@ -3808,6 +3834,25 @@ function applyCloudData(cloudData, embeddedData) {
     } else if (!isEmpty(lSy11)) {
       D.room_sy11 = lSy11;
       needsCloudSave = true;
+    }
+
+    // 自动售货机销售（云迹对账单）：优先云端，其次本地
+    var cVending = cloudData.vending;
+    var lVending = tryParse('vending');
+    if (!isEmpty(cVending)) {
+      localStorage.setItem('vending', JSON.stringify(cVending));
+      D.vending = cVending;
+    } else if (!isEmpty(lVending)) {
+      D.vending = lVending;
+      needsCloudSave = true;
+    }
+    var cVendingMeta = cloudData.vending_meta;
+    var lVendingMeta = tryParse('vending_meta');
+    if (!isEmpty(cVendingMeta)) {
+      localStorage.setItem('vending_meta', JSON.stringify(cVendingMeta));
+      D.vending_meta = cVendingMeta;
+    } else if (!isEmpty(lVendingMeta)) {
+      D.vending_meta = lVendingMeta;
     }
 
     // 自动汇总：从 fb_raw / fb_breakfast 反算「有数据但 MS 缺失或全零」的月份
@@ -7565,6 +7610,132 @@ function handleRoomUpload(event) {
   if (event && event.target) event.target.value = '';
 }
 
+// ============= 自动售货机对账单导入（云迹 25 列） =============
+function handleVendingUpload(event) {
+  if (!event || !event.target || !event.target.files || event.target.files.length === 0) {
+    showToast('未选择文件', 'error'); return;
+  }
+  const file = event.target.files[0];
+  if (!file) { showToast('未选择文件', 'error'); return; }
+  showToast('正在解析自动售货机对账单...', 'info');
+
+  const reader = new FileReader();
+  reader.onerror = function() { showToast('读取文件失败', 'error'); };
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+
+      // 选取含「商品名字/订单编号」表头的 Sheet（模板含「对账汇总 / 昌宁盛世金樽大酒店」两张相同数据，只读一张避免重复计）。
+      // 注意：云迹对账单首行常为标题（如"昌宁盛世金樽大酒店对账单"），表头在下一行，故需在每张表前几行中定位表头行。
+      const names = wb.SheetNames || [];
+      let ws = null;
+      for (let ni = 0; ni < names.length; ni++) {
+        const s = wb.Sheets[names[ni]];
+        const all = XLSX.utils.sheet_to_json(s, { header: 1, defval: '', blankrows: true });
+        let found = false;
+        for (let ri = 0; ri < Math.min(all.length, 4); ri++) {
+          if (((all[ri] || []).join(',')).indexOf('商品名字') >= 0 || ((all[ri] || []).join(',')).indexOf('订单编号') >= 0) { found = true; break; }
+        }
+        if (found) { ws = s; break; }
+      }
+      if (!ws) { showToast('未找到自动售货机对账单Sheet（需含"商品名字/订单编号"列）', 'error'); return; }
+
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: true });
+      if (rows.length < 2) { showToast('数据为空', 'error'); return; }
+
+      // 在首 4 行内定位表头行（兼容首行为标题的情况），表头行之后为数据
+      let headerRowIdx = -1;
+      for (let ri = 0; ri < Math.min(rows.length, 4); ri++) {
+        const r = (rows[ri] || []).map(h => String(h == null ? '' : h).trim());
+        if (r.indexOf('商品名字') >= 0 || r.indexOf('订单编号') >= 0) { headerRowIdx = ri; break; }
+      }
+      if (headerRowIdx < 0) { showToast('未找到自动售货机对账单表头（需含"商品名字/订单编号"列）', 'error'); return; }
+
+      const header = (rows[headerRowIdx] || []).map(h => String(h == null ? '' : h).trim());
+      const col = function(name) { return header.indexOf(name); };
+      const iPayMethod = col('支付方式'), iPayNo = col('支付编号'), iCreate = col('订单创建时间'),
+            iPayTime = col('订单支付时间'), iStore = col('门店'), iProdNo = col('商品编号'),
+            iOrderNo = col('订单编号'), iPoint = col('点位名称'), iGoods = col('商品名字'),
+            iUnit = col('单价'), iCount = col('数量'), iAmount = col('实收金额'), iStatus = col('状态');
+
+      const toStr = function(v) { return v == null ? '' : String(v); };
+      const toNum = function(v) { const n = Number(v); return isFinite(n) ? n : 0; };
+      const parseDate = function(v) {
+        if (v == null || v === '') return '';
+        if (v instanceof Date) { var d = v; return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+        const s = toStr(v).replace(/\//g, '-');
+        const m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (m) return m[1] + '-' + m[2] + '-' + m[3];
+        const m2 = s.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+        if (m2) return m2[1] + '-' + m2[2] + '-' + m2[3];
+        return '';
+      };
+
+      const newRecords = [];
+      const seen = {};
+      let skipped = 0;
+      for (let i = headerRowIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        const goods = toStr(r[iGoods]).trim();
+        const orderNo = toStr(r[iOrderNo]).trim();
+        const status = toStr(r[iStatus]).trim();
+        if (!goods || !orderNo) { skipped++; continue; }
+        if (goods === '合计' || orderNo === '合计') continue;       // 排除合计行
+        if (status.indexOf('退款') >= 0) { skipped++; continue; }    // 排除退款订单
+        const prodNo = toStr(r[iProdNo]).trim();
+        const key = orderNo + '|' + prodNo;
+        if (seen[key]) { skipped++; continue; }
+        seen[key] = 1;
+        const payTime = parseDate(r[iPayTime]);
+        const ymMatch = payTime.match(/^(\d{4})-(\d{1,2})/);
+        newRecords.push({
+          orderNo: orderNo,
+          payTime: payTime,
+          year: ymMatch ? parseInt(ymMatch[1], 10) : 0,
+          month: ymMatch ? parseInt(ymMatch[2], 10) : 0,
+          goodsName: goods,
+          prodNo: prodNo,
+          unitPrice: toNum(r[iUnit]),
+          count: toNum(r[iCount]),
+          amount: toNum(r[iAmount]),
+          pointName: toStr(r[iPoint]).trim(),
+          payMethod: toStr(r[iPayMethod]).trim(),
+          store: toStr(r[iStore]).trim(),
+          status: status
+        });
+      }
+      if (!newRecords.length) { showToast('未解析到有效记录（请检查模板格式）', 'error'); return; }
+
+      // 合并去重（按 orderNo|prodNo）并入 D.vending / localStorage
+      let existing = [];
+      try { existing = JSON.parse(localStorage.getItem('vending') || '[]'); } catch (e) { existing = []; }
+      const eSeen = {};
+      existing.forEach(function(r) { eSeen[(r.orderNo || '') + '|' + (r.prodNo || '')] = 1; });
+      let added = 0;
+      newRecords.forEach(function(r) {
+        const k = (r.orderNo || '') + '|' + (r.prodNo || '');
+        if (!eSeen[k]) { existing.push(r); eSeen[k] = 1; added++; }
+      });
+      D.vending = existing;
+      try { localStorage.setItem('vending', JSON.stringify(existing)); } catch (e) {}
+      D.vending_meta = { fileName: file.name, lastUpload: new Date().toISOString(), recordCount: existing.length };
+      try { localStorage.setItem('vending_meta', JSON.stringify(D.vending_meta)); } catch (e) {}
+
+      saveData();
+      showToast('✅ 自动售货机对账单导入成功：新增 ' + added + ' 条，合计 ' + existing.length + ' 条有效记录' +
+        (skipped ? '（跳过 ' + skipped + ' 条重复/无效/退款）' : ''), 'success', 5000);
+
+      // 刷新展示并跳转到小商品分析页查看
+      if (typeof rmSub !== 'undefined' && rmSub.switchSub) rmSub.switchSub('sy11');
+    } catch (err) {
+      console.error(err);
+      showToast('解析失败: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  if (event && event.target) event.target.value = '';
+}
+
 // ============= 统一餐饮数据导入 =============
 // 唯一入口: 解析 收入明细 + 早餐日报 + 月度营收汇总 + 目标, 同时更新 D.fb_raw 和 fbSub 的 localStorage
 function handleFBUpload(event) {
@@ -8720,6 +8891,12 @@ async function cloudSaveMeta() {
   payload.room_sy11 = (function() {
     try { return JSON.parse(localStorage.getItem('room_sy11') || '[]'); } catch(e) { return existing.room_sy11 || D.room_sy11 || []; }
   })();
+  payload.vending = (function() {
+    try { return JSON.parse(localStorage.getItem('vending') || '[]'); } catch(e) { return existing.vending || D.vending || []; }
+  })();
+  payload.vending_meta = (function() {
+    try { return JSON.parse(localStorage.getItem('vending_meta') || 'null'); } catch(e) { return existing.vending_meta || D.vending_meta || null; }
+  })();
   payload.room_maintenance = (function() {
     try { return JSON.parse(localStorage.getItem('room_maintenance') || '{}'); } catch(e) { return existing.room_maintenance || {}; }
   })();
@@ -8781,6 +8958,12 @@ async function cloudSave() {
     })();
     payload.room_maintenance = (function() {
       try { return JSON.parse(localStorage.getItem('room_maintenance') || '{}'); } catch(e) { return existing.room_maintenance || {}; }
+    })();
+    payload.vending = (function() {
+      try { return JSON.parse(localStorage.getItem('vending') || '[]'); } catch(e) { return existing.vending || D.vending || []; }
+    })();
+    payload.vending_meta = (function() {
+      try { return JSON.parse(localStorage.getItem('vending_meta') || 'null'); } catch(e) { return existing.vending_meta || D.vending_meta || null; }
     })();
     payload.fb_targets_a = D.fb_targets_a || existing.fb_targets_a || {};
     payload.meta = D.meta || existing.meta || {};
@@ -12523,6 +12706,7 @@ var rmSub = (function() {
 
   // ===== 小商品分析 (SY11 别样红) =====
   var sy11CigChart = null, sy11TrendChart = null;
+  var vendingTrendChart = null;
   var YEAR_PALETTE = {2024:'#2e9e5b',2025:'#e39b3e',2026:'#2f7fd1',2027:'#8a5cd1',2028:'#d15ca8',2029:'#5c6bc0'};
   function sy11YearsAvail() {
     var ys = {};
@@ -12555,10 +12739,9 @@ var rmSub = (function() {
     if (!el) return;
     var banner = document.getElementById('sy11ErrBanner');
     if (!D.room_sy11 || !D.room_sy11.length) {
-      if (banner) banner.innerHTML = '<div class="room-err">暂无小商品数据（SY11）。请等待每日自动同步，或运行 sy11_grab.py 抓取。</div>';
-      return;
-    }
-    if (banner) banner.innerHTML = '';
+      if (banner) banner.innerHTML = '<div class="room-err">暂无小商品数据（SY11）。请等待每日自动同步，或运行 sy11_grab.py 抓取。自动售货机销售数据见下方（如有）。</div>';
+    } else {
+      if (banner) banner.innerHTML = '';
     var sel = getSy11Sel();
     var onlyCig = document.getElementById('sy11OnlyCig') && document.getElementById('sy11OnlyCig').checked;
     var excCig = document.getElementById('sy11ExcCig') && document.getElementById('sy11ExcCig').checked;
@@ -12607,6 +12790,8 @@ var rmSub = (function() {
     var tbl = document.getElementById('sy11Table'); if(tbl) tbl.innerHTML = th;
     renderSy11Cig();
     renderSy11Trend();
+    }
+    renderVending();
   }
   function renderSy11Cig() {
     if (!D.room_sy11 || !D.room_sy11.length) return;
@@ -12699,6 +12884,81 @@ var rmSub = (function() {
     });
   }
 
+  // ===== 自动售货机销售分析（云迹对账单） =====
+  function renderVending() {
+    var kpis = document.getElementById('vendingKPIs');
+    var tbl = document.getElementById('vendingTable');
+    var banner = document.getElementById('vendingErrBanner');
+    var el = document.getElementById('chartVendingTrend');
+    if (!D.vending || !D.vending.length) {
+      if (banner) banner.innerHTML = '<div class="room-err">暂无自动售货机销售数据。请到「数据管理」TAB 上传云迹对账单（.xls/.xlsx）。</div>';
+      if (kpis) kpis.innerHTML = '';
+      if (tbl) tbl.innerHTML = '';
+      if (vendingTrendChart) { vendingTrendChart.destroy(); vendingTrendChart = null; }
+      return;
+    }
+    if (banner) banner.innerHTML = '';
+
+    var sel = getSy11Sel();
+    var rows = (D.vending || []).filter(function(r) {
+      var ry = parseInt(r.year, 10) || 0, rm = parseInt(r.month, 10) || 0;
+      if (sel.year && ry !== sel.year) return false;
+      if (sel.months && sel.months.length && sel.months.indexOf(rm) < 0) return false;
+      return true;
+    });
+
+    // KPI
+    var totAmt = 0, totCnt = 0; var orderSet = {}, kindSet = {};
+    rows.forEach(function(r) {
+      totAmt += (r.amount || 0); totCnt += (r.count || 0);
+      orderSet[r.orderNo] = 1; kindSet[r.goodsName] = 1;
+    });
+    if (kpis) kpis.innerHTML =
+      '<div class="kpi-card k-blue xl"><div class="kpi-label">实收销售额</div><div class="kpi-value">' + sy11fmt(totAmt) + '</div><div class="kpi-sub">' + rows.length + ' 条记录</div></div>' +
+      '<div class="kpi-card k-green xl"><div class="kpi-label">销量</div><div class="kpi-value">' + Math.round(totCnt) + ' 件</div><div class="kpi-sub">商品总销量</div></div>' +
+      '<div class="kpi-card k-orange xl"><div class="kpi-label">订单数</div><div class="kpi-value">' + Object.keys(orderSet).length + ' 单</div><div class="kpi-sub">按订单号去重</div></div>' +
+      '<div class="kpi-card k-purple xl"><div class="kpi-label">商品种类</div><div class="kpi-value">' + Object.keys(kindSet).length + ' 种</div><div class="kpi-sub">去重商品数</div></div>';
+
+    // 月度趋势（柱状）
+    var xNums = moNums('sy11Months').map(function(s) { return parseInt(s, 10); });
+    if (!xNums.length) xNums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    var xLabels = xNums.map(function(m) { return m + '月'; });
+    var data = xNums.map(function(m) {
+      var s = 0;
+      rows.forEach(function(r) { if ((parseInt(r.month, 10) || 0) === m) s += (r.amount || 0); });
+      return Math.round(s * 100) / 100;
+    });
+    if (vendingTrendChart) vendingTrendChart.destroy();
+    if (el && typeof Chart !== 'undefined') {
+      vendingTrendChart = new Chart(el, {
+        type: 'bar',
+        data: { labels: xLabels, datasets: [{ label: (sel.year || '全部') + '年 实收金额', data: data, backgroundColor: YEAR_PALETTE[sel.year] || '#2f7fd1', borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return sy11fmt(c.parsed.y); } } } },
+          scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return '¥' + v; } } } } }
+      });
+    }
+
+    // 商品明细表
+    var gMap = {};
+    rows.forEach(function(r) {
+      var k = r.goodsName || '未知';
+      if (!gMap[k]) gMap[k] = { name: k, amt: 0, cnt: 0 };
+      gMap[k].amt += (r.amount || 0); gMap[k].cnt += (r.count || 0);
+    });
+    var gArr = Object.keys(gMap).map(function(k) { return gMap[k]; });
+    gArr.sort(function(a, b) { return b.amt - a.amt; });
+    var th = '<thead><tr><th>商品名称</th><th>平均价格</th><th>数量</th><th>实收金额</th><th>占比</th></tr></thead><tbody>';
+    gArr.forEach(function(g) {
+      var avg = g.cnt ? (g.amt / g.cnt) : 0;
+      var pct = totAmt ? (g.amt / totAmt * 100).toFixed(1) : '0.0';
+      th += '<tr><td>' + g.name + '</td><td>' + sy11fmt(avg) + '</td><td>' + Math.round(g.cnt) + '</td><td>' + sy11fmt(g.amt) + '</td><td>' + pct + '%</td></tr>';
+    });
+    th += '<tr style="font-weight:700;background:var(--primary-light)"><td>合计</td><td>-</td><td>' + Math.round(totCnt) + '</td><td>' + sy11fmt(totAmt) + '</td><td>100%</td></tr>';
+    th += '</tbody>';
+    if (tbl) tbl.innerHTML = th;
+  }
+
   return {
     switchSub: switchSub,
     search: search, goPage: goPage, del: del,
@@ -12707,12 +12967,12 @@ var rmSub = (function() {
     loadCodes: loadCodes, loadTgtYears: loadTgtYears,
     renderRoomTgt: renderRoomTgt,
     expTbl: expTbl,
-    renderSy11: renderSy11, renderSy11Cig: renderSy11Cig, renderSy11Trend: renderSy11Trend, initSy11Filters: initSy11Filters
+    renderSy11: renderSy11, renderSy11Cig: renderSy11Cig, renderSy11Trend: renderSy11Trend, initSy11Filters: initSy11Filters, renderVending: renderVending
   };
 })();
 
 // ============= DRAG & DROP =============
-['rmUploadZone', 'uploadRoom', 'uploadFB', 'modalUploadRoom', 'modalUploadFB'].forEach(id => {
+['rmUploadZone', 'uploadRoom', 'uploadFB', 'modalUploadRoom', 'modalUploadFB', 'vendingUploadZone'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
@@ -12724,6 +12984,8 @@ var rmSub = (function() {
     if (!file) return;
     if (id === 'rmUploadZone') {
       handleRoomUpload({ target: { files: [file] } });
+    } else if (id === 'vendingUploadZone') {
+      handleVendingUpload({ target: { files: [file] } });
     } else if (id.includes('Room') || id.includes('room')) {
       handleRoomUpload({ target: { files: [file] } });
     } else {
