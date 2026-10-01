@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20260929-8">
-<title>酒店经营分析看板 V20260929-8</title>
+<meta name="build-version" content="V20261001-1">
+<title>酒店经营分析看板 V20261001-1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1568,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20260929-8</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261001-1</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1905,8 +1905,6 @@ html { scroll-behavior: smooth; }
       <label>年份</label><select id="sy11Year" onchange="rmSub.renderSy11()"></select>
       <label>月份</label><span class="cmp-chk-group" id="sy11Months"></span>
       <span class="cmp-chk-group" id="sy11CmpYears"></span>
-      <label class="inc-partial"><input type="checkbox" id="sy11OnlyCig" onchange="rmSub.renderSy11()"> 仅看香烟</label>
-      <label class="inc-partial"><input type="checkbox" id="sy11ExcCig" onchange="rmSub.renderSy11()" checked> 排除香烟</label>
       <button class="mini-btn" onclick="rmSub.renderSy11()">刷新</button>
     </div>
     <!-- KPI -->
@@ -1937,11 +1935,12 @@ html { scroll-behavior: smooth; }
       <div id="vendingErrBanner"></div>
       <div class="kpi-grid" id="vendingKPIs" style="margin-top:8px;"></div>
       <div style="margin-top:12px;">
-        <div class="chart-title">月度销售额趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">实收金额 · 随上方年份/月份筛选</span></div>
+        <div class="chart-title">月度分成金额趋势 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">按月</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin:-10px 0 8px 13px;">横轴为月份，随上方年份/月份筛选变化</div>
         <div class="chart-canvas-wrap tall"><canvas id="chartVendingTrend"></canvas></div>
       </div>
       <div style="margin-top:12px;">
-        <div class="chart-title">商品销售明细 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">按实收金额降序</span></div>
+        <div class="chart-title">商品销售明细 <span class="badge-sm" style="background:var(--accent-light);color:var(--accent)">按分成金额降序</span></div>
         <div class="sy11-table-wrap">
           <table class="fb-table sy11-table" id="vendingTable"></table>
         </div>
@@ -1965,7 +1964,7 @@ html { scroll-behavior: smooth; }
       <div class="fb-upload-zone" id="vendingUploadZone" onclick="document.getElementById('vendingFileInput').click()">
         <div class="upload-icon" style="font-size:36px;margin-bottom:8px;">🤖</div>
         <div class="upload-text">点击或拖拽导入自动售货机对账单</div>
-        <div class="upload-hint">支持 .xls/.xlsx 格式 · 25 列云迹对账单（支付方式/订单编号/商品名字/实收金额…）</div>
+        <div class="upload-hint">支持 .xls/.xlsx 格式 · 25 列云迹对账单（支付方式/订单编号/商品名字/分成金额…）</div>
       </div>
       <input type="file" id="vendingFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleVendingUpload(event)">
       <div id="vendingImportResult" style="display:none" class="fb-import-result"></div>
@@ -7656,7 +7655,7 @@ function handleVendingUpload(event) {
       const iPayMethod = col('支付方式'), iPayNo = col('支付编号'), iCreate = col('订单创建时间'),
             iPayTime = col('订单支付时间'), iStore = col('门店'), iProdNo = col('商品编号'),
             iOrderNo = col('订单编号'), iPoint = col('点位名称'), iGoods = col('商品名字'),
-            iUnit = col('单价'), iCount = col('数量'), iAmount = col('实收金额'), iStatus = col('状态');
+            iUnit = col('单价'), iCount = col('数量'), iAmount = col('分成金额'), iStatus = col('状态');
 
       const toStr = function(v) { return v == null ? '' : String(v); };
       const toNum = function(v) { const n = Number(v); return isFinite(n) ? n : 0; };
@@ -12743,12 +12742,10 @@ var rmSub = (function() {
     } else {
       if (banner) banner.innerHTML = '';
     var sel = getSy11Sel();
-    var onlyCig = document.getElementById('sy11OnlyCig') && document.getElementById('sy11OnlyCig').checked;
-    var excCig = document.getElementById('sy11ExcCig') && document.getElementById('sy11ExcCig').checked;
     // 统一按数字类型做年份/月份比较，避免 JSON 中字符串类型导致筛选失效
     function _sy11Year(r){ return parseInt(r.year, 10) || 0; }
     function _sy11Month(r){ return parseInt(r.month, 10) || 0; }
-    // 全量（按当前年份+选中月份）用于计算香烟占比，避免“排除香烟”勾选后该 KPI 变成 0% 失去参考意义
+    // 全量（按当前年份+选中月份）用于计算香烟占比；主表默认排除香烟，由下方「香烟销售分析」单独展示香烟
     var allRows = D.room_sy11.filter(function(r){
       var ry = _sy11Year(r), rm = _sy11Month(r);
       if (sel.year && ry !== sel.year) return false;
@@ -12757,11 +12754,7 @@ var rmSub = (function() {
     });
     var allAmt=0, allCigAmt=0;
     allRows.forEach(function(r){ allAmt+=r.amount; if(r.isCig) allCigAmt+=r.amount; });
-    var rows = allRows.filter(function(r){
-      if (onlyCig && !r.isCig) return false;
-      if (excCig && r.isCig) return false;
-      return true;
-    });
+    var rows = allRows.filter(function(r){ return !r.isCig; });
     var totAmt=0, totCnt=0; var kinds={};
     rows.forEach(function(r){ totAmt+=r.amount; totCnt+=r.count; kinds[r.goodsName]=1; });
     var kpis = document.getElementById('sy11KPIs');
@@ -12914,12 +12907,12 @@ var rmSub = (function() {
       orderSet[r.orderNo] = 1; kindSet[r.goodsName] = 1;
     });
     if (kpis) kpis.innerHTML =
-      '<div class="kpi-card k-blue xl"><div class="kpi-label">实收销售额</div><div class="kpi-value">' + sy11fmt(totAmt) + '</div><div class="kpi-sub">' + rows.length + ' 条记录</div></div>' +
+      '<div class="kpi-card k-blue xl"><div class="kpi-label">分成金额</div><div class="kpi-value">' + sy11fmt(totAmt) + '</div><div class="kpi-sub">' + rows.length + ' 条记录</div></div>' +
       '<div class="kpi-card k-green xl"><div class="kpi-label">销量</div><div class="kpi-value">' + Math.round(totCnt) + ' 件</div><div class="kpi-sub">商品总销量</div></div>' +
       '<div class="kpi-card k-orange xl"><div class="kpi-label">订单数</div><div class="kpi-value">' + Object.keys(orderSet).length + ' 单</div><div class="kpi-sub">按订单号去重</div></div>' +
       '<div class="kpi-card k-purple xl"><div class="kpi-label">商品种类</div><div class="kpi-value">' + Object.keys(kindSet).length + ' 种</div><div class="kpi-sub">去重商品数</div></div>';
 
-    // 月度趋势（柱状）
+    // 月度趋势（折线）
     var xNums = moNums('sy11Months').map(function(s) { return parseInt(s, 10); });
     if (!xNums.length) xNums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     var xLabels = xNums.map(function(m) { return m + '月'; });
@@ -12930,12 +12923,13 @@ var rmSub = (function() {
     });
     if (vendingTrendChart) vendingTrendChart.destroy();
     if (el && typeof Chart !== 'undefined') {
+      var color = YEAR_PALETTE[sel.year] || '#2f7fd1';
       vendingTrendChart = new Chart(el, {
-        type: 'bar',
-        data: { labels: xLabels, datasets: [{ label: (sel.year || '全部') + '年 实收金额', data: data, backgroundColor: YEAR_PALETTE[sel.year] || '#2f7fd1', borderRadius: 4 }] },
+        type: 'line',
+        data: { labels: xLabels, datasets: [{ label: (sel.year || '全部') + '年 分成金额', data: data, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 3, tension: 0.3, fill: false }] },
         options: { responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return sy11fmt(c.parsed.y); } } } },
-          scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return '¥' + v; } } } } }
+          plugins: { legend: { display: true, position: 'top' }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ' ' + c.label + ': ' + sy11fmt(c.parsed.y); } } }, datalabels: { display: 'auto' } },
+          scales: { x: { ticks: { maxRotation: 60, minRotation: 45, font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: function(v) { return '¥' + v; } }, title: { display: true, text: '分成金额' } } } }
       });
     }
 
@@ -12948,7 +12942,7 @@ var rmSub = (function() {
     });
     var gArr = Object.keys(gMap).map(function(k) { return gMap[k]; });
     gArr.sort(function(a, b) { return b.amt - a.amt; });
-    var th = '<thead><tr><th>商品名称</th><th>平均价格</th><th>数量</th><th>实收金额</th><th>占比</th></tr></thead><tbody>';
+    var th = '<thead><tr><th>商品名称</th><th>平均价格</th><th>数量</th><th>分成金额</th><th>占比</th></tr></thead><tbody>';
     gArr.forEach(function(g) {
       var avg = g.cnt ? (g.amt / g.cnt) : 0;
       var pct = totAmt ? (g.amt / totAmt * 100).toFixed(1) : '0.0';
