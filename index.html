@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20261001-2">
-<title>酒店经营分析看板 V20261001-2</title>
+<meta name="build-version" content="V20261001-3">
+<title>酒店经营分析看板 V20261001-3</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1568,7 +1568,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261001-2</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261001-3</span>
     </div>
     <div class="header-actions">
     </div>
@@ -7660,11 +7660,25 @@ function handleVendingUpload(event) {
       if (headerRowIdx < 0) { showToast('未找到自动售货机对账单表头（需含"商品名字/订单编号"列）', 'error'); return; }
 
       const header = (rows[headerRowIdx] || []).map(h => String(h == null ? '' : h).trim());
-      const col = function(name) { return header.indexOf(name); };
+      // 表头归一化：去空白、去单位括号，兼容「分成金额（元）」等写法
+      const normHeader = header.map(h => h.replace(/[\s\uff08\u0028].*?[\uff09\u0029]$/g, '').replace(/\s+/g, ''));
+      const col = function(name) {
+        let idx = header.indexOf(name);
+        if (idx >= 0) return idx;
+        const n = String(name).replace(/[\s\uff08\u0028].*?[\uff09\u0029]$/g, '').replace(/\s+/g, '');
+        return normHeader.indexOf(n);
+      };
       const iPayMethod = col('支付方式'), iPayNo = col('支付编号'), iCreate = col('订单创建时间'),
             iPayTime = col('订单支付时间'), iStore = col('门店'), iProdNo = col('商品编号'),
             iOrderNo = col('订单编号'), iPoint = col('点位名称'), iGoods = col('商品名字'),
-            iUnit = col('单价'), iCount = col('数量'), iAmount = col('分成金额'), iStatus = col('状态');
+            iUnit = col('单价'), iCount = col('数量'), iStatus = col('状态');
+      // 金额列优先「分成金额」，缺失时 fallback 到「实收金额/商品金额/金额」并提示
+      let iAmount = col('分成金额');
+      let amountColName = '分成金额';
+      if (iAmount < 0) { iAmount = col('实收金额'); amountColName = '实收金额'; }
+      if (iAmount < 0) { iAmount = col('商品金额'); amountColName = '商品金额'; }
+      if (iAmount < 0) { iAmount = col('金额'); amountColName = '金额'; }
+      if (iAmount < 0) { showToast('未找到金额列（需含「分成金额/实收金额/商品金额/金额」之一）', 'error'); return; }
 
       const toStr = function(v) { return v == null ? '' : String(v); };
       const toNum = function(v) { const n = Number(v); return isFinite(n) ? n : 0; };
@@ -7706,6 +7720,8 @@ function handleVendingUpload(event) {
           unitPrice: toNum(r[iUnit]),
           count: toNum(r[iCount]),
           amount: toNum(r[iAmount]),
+          _schemaVersion: 'v2-split',
+          _amountCol: amountColName,
           pointName: toStr(r[iPoint]).trim(),
           payMethod: toStr(r[iPayMethod]).trim(),
           store: toStr(r[iStore]).trim(),
@@ -7731,7 +7747,8 @@ function handleVendingUpload(event) {
 
       saveData();
       showToast('✅ 自动售货机对账单导入成功：新增 ' + added + ' 条，合计 ' + existing.length + ' 条有效记录' +
-        (skipped ? '（跳过 ' + skipped + ' 条重复/无效/退款）' : ''), 'success', 5000);
+        (skipped ? '（跳过 ' + skipped + ' 条重复/无效/退款）' : '') +
+        '，金额列：' + amountColName, 'success', 5000);
 
       // 刷新展示并跳转到小商品分析页查看
       if (typeof rmSub !== 'undefined' && rmSub.switchSub) rmSub.switchSub('sy11');
@@ -12908,7 +12925,15 @@ var rmSub = (function() {
       if (vendingTrendChart) { vendingTrendChart.destroy(); vendingTrendChart = null; }
       return;
     }
-    if (banner) banner.innerHTML = '';
+    // 检测旧口径数据：缺少 v2-split 标记的记录为上传代码切换成「分成金额」之前的数据，需重新上传
+    var staleCount = D.vending.filter(function(r){ return r._schemaVersion !== 'v2-split'; }).length;
+    if (banner) {
+      if (staleCount) {
+        banner.innerHTML = '<div class="room-err" style="background:#fff3cd;color:#856404;border-left-color:#e39b3e;">当前自动售货机数据包含 ' + staleCount + ' 条旧口径记录（金额可能仍为「实收金额」）。请到「数据管理」TAB 重新上传云迹对账单，以更新为「分成金额」口径。</div>';
+      } else {
+        banner.innerHTML = '';
+      }
+    }
 
     var sel = getSy11Sel();
     var rows = excludePartialSy11((D.vending || []).filter(function(r) {
