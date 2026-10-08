@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20261008-2">
-<title>酒店经营分析看板 V20261008-2</title>
+<meta name="build-version" content="V20261008-3">
+<title>酒店经营分析看板 V20261008-3</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1212,7 +1212,7 @@ body {
 }
 .fb-filter-bar select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-light); }
 /* ===== 左侧筛选栏（试点：客房分析 / 餐饮分析）===== */
-/* V20261008-2 左侧固定栏 → V20261008-2 隐藏式抽屉：默认收起，点「筛选」把手滑出覆盖内容，不占内容宽度 */
+/* V20261008-3 左侧固定栏 → V20261008-3 隐藏式抽屉：默认收起，点「筛选」把手滑出覆盖内容，不占内容宽度 */
 .filter-layout { display: flex; gap: 16px; align-items: flex-start; }
 .filter-fab {
   position: fixed; left: 0; top: calc(var(--filterTop, 72px) + 28px); z-index: 94;
@@ -1236,6 +1236,7 @@ body {
 }
 .filter-side-col.drawer-open { transform: none; box-shadow: 8px 0 30px rgba(2,8,20,.22); }
 .filter-side-col .fb-filter-bar { flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 0; background: var(--surface); }
+.filter-side-col .source-filter-bar { margin-bottom: 0; }
 .filter-side-col .fb-filter-bar select { width: 100%; }
 .filter-side-col .inc-partial { margin-left: 0; }
 .filter-main { flex: 1 1 auto; min-width: 0; }
@@ -1596,7 +1597,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261008-2</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261008-3</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1721,7 +1722,7 @@ html { scroll-behavior: smooth; }
     <button data-rmtab="sy11" onclick="rmSub.switchSub('sy11')">🛒 小商品分析</button>
     <button data-rmtab="dm" onclick="rmSub.switchSub('dm')">💾 数据管理</button>
   </div>
-  <!-- Room Filter Bar (moved from global, styled like 餐饮) — V20261008-2 隐藏式抽屉筛选栏 -->
+  <!-- Room Filter Bar (moved from global, styled like 餐饮) — V20261008-3 隐藏式抽屉筛选栏 -->
   <button class="filter-fab" id="roomFilterFab" onclick="toggleFilterDrawer('room')">筛选</button>
   <div class="filter-backdrop" id="roomFilterBk" onclick="toggleFilterDrawer('room', 1)"></div>
   <div class="filter-layout">
@@ -1731,6 +1732,39 @@ html { scroll-behavior: smooth; }
     <label>月份</label><span class="cmp-chk-group" id="rmMF"></span>
     <span class="cmp-chk-group" id="roomCmpYears"></span>
     <label class="inc-partial"><input type="checkbox" id="incPartialChk" onchange="onFilterChange()"> 包含进行中月份</label>
+  </div>
+  <!-- 客源分析专属筛选（V20261008-3 由页面内移到抽屉，字段/联动不变） -->
+  <div class="source-filter-bar" id="sourceFilterBar" style="display:none">
+    <div class="source-filter-group">
+      <span class="source-filter-label">客源一级分类</span>
+      <span class="cmp-chk-group" id="sourceFilter"></span>
+    </div>
+    <div class="source-filter-group">
+      <span class="source-filter-label">客源二级分类</span>
+      <span class="cmp-chk-group" id="source2Filter"></span>
+    </div>
+  </div>
+  <!-- 房型分析专属筛选（V20261008-3 移到抽屉） -->
+  <div class="source-filter-bar" id="rtSourceFilterBar" style="display:none">
+    <div class="source-filter-group">
+      <span class="source-filter-label">客源一级分类</span>
+      <span class="cmp-chk-group" id="rtSourceFilter"></span>
+    </div>
+    <div class="source-filter-group">
+      <span class="source-filter-label">客源二级分类</span>
+      <span class="cmp-chk-group" id="rtSource2Filter"></span>
+    </div>
+    <div class="source-filter-group">
+      <span class="source-filter-label">房型代码</span>
+      <span class="cmp-chk-group" id="rtRoomCodeFilter"></span>
+    </div>
+  </div>
+  <!-- 小商品分析专属筛选（V20261008-3 移到抽屉） -->
+  <div class="fb-filter-bar" id="sy11FilterBar" style="display:none">
+    <label>年份</label><select id="sy11Year" onchange="rmSub.renderSy11()"></select>
+    <label>月份</label><span class="cmp-chk-group" id="sy11Months"></span>
+    <span class="cmp-chk-group" id="sy11CmpYears"></span>
+    <label class="inc-partial"><input type="checkbox" id="incPartialChkSy11" onchange="rmSub.renderSy11()" title="勾选后将当前未结束的月份也纳入小商品分析统计"> 包含进行中月份</label>
   </div>
   </div>
   <div class="filter-main">
@@ -1777,17 +1811,7 @@ html { scroll-behavior: smooth; }
   </div>
   <!-- Room Sub-Page: 客源分析 -->
   <div class="fb-page" id="rmpg-sources">
-    <!-- 客源分析专属筛选条：一级/二级分类多选 -->
-    <div class="source-filter-bar" id="sourceFilterBar">
-      <div class="source-filter-group">
-        <span class="source-filter-label">客源一级分类</span>
-        <span class="cmp-chk-group" id="sourceFilter"></span>
-      </div>
-      <div class="source-filter-group">
-        <span class="source-filter-label">客源二级分类</span>
-        <span class="cmp-chk-group" id="source2Filter"></span>
-      </div>
-    </div>
+    <!-- 客源分析专属筛选条已移入左侧抽屉 #sourceFilterBar（V20261008-3） -->
     <div class="chart-grid">
       <div class="chart-card source-pie-card">
         <div class="chart-title" id="sourcePieTitle">客源结构占比 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">间夜</span></div>
@@ -1885,21 +1909,7 @@ html { scroll-behavior: smooth; }
   </div>
   <!-- Room Sub-Page: 房型分析 -->
   <div class="fb-page" id="rmpg-roomtype">
-    <!-- 房型分析专属筛选条：客源一级/二级分类多选（与客源分析一致） -->
-    <div class="source-filter-bar" id="rtSourceFilterBar">
-      <div class="source-filter-group">
-        <span class="source-filter-label">客源一级分类</span>
-        <span class="cmp-chk-group" id="rtSourceFilter"></span>
-      </div>
-      <div class="source-filter-group">
-        <span class="source-filter-label">客源二级分类</span>
-        <span class="cmp-chk-group" id="rtSource2Filter"></span>
-      </div>
-      <div class="source-filter-group">
-        <span class="source-filter-label">房型代码</span>
-        <span class="cmp-chk-group" id="rtRoomCodeFilter"></span>
-      </div>
-    </div>
+    <!-- 房型分析专属筛选条已移入左侧抽屉 #rtSourceFilterBar（V20261008-3） -->
     <div class="chart-card" style="margin-top:8px;">
       <div class="chart-title">房型营收 / 间夜分析 <span class="badge-sm" style="background:var(--primary-light);color:var(--primary)">按客源筛选</span></div>
       <div class="data-table-wrap">
@@ -1933,15 +1943,9 @@ html { scroll-behavior: smooth; }
   </div>
   <!-- Room Sub-Page: 小商品分析 (SY11) -->
   <div class="fb-page" id="rmpg-sy11">
-    <div id="sy11ErrBanner"></div>
-    <!-- 控制条 -->
-    <div class="fb-filter-bar" id="sy11FilterBar">
-      <label>年份</label><select id="sy11Year" onchange="rmSub.renderSy11()"></select>
-      <label>月份</label><span class="cmp-chk-group" id="sy11Months"></span>
-      <span class="cmp-chk-group" id="sy11CmpYears"></span>
-      <label class="inc-partial"><input type="checkbox" id="incPartialChkSy11" onchange="rmSub.renderSy11()" title="勾选后将当前未结束的月份也纳入小商品分析统计"> 包含进行中月份</label>
-    </div>
-    <!-- KPI -->
+      <div id="sy11ErrBanner"></div>
+      <!-- 控制条已移入左侧抽屉 #sy11FilterBar（V20261008-3） -->
+      <!-- KPI -->
     <div class="kpi-grid" id="sy11KPIs"></div>
     <!-- 香烟专项 -->
     <div class="chart-card" style="margin-top:16px;">
@@ -2068,7 +2072,7 @@ html { scroll-behavior: smooth; }
     <button data-fbtab="dm" onclick="fbSub.switchSub('dm')">⚙️ 数据管理</button>
   </div>
 
-  <!-- F&B Filter Bar — V20261008-2 隐藏式抽屉筛选栏 -->
+  <!-- F&B Filter Bar — V20261008-3 隐藏式抽屉筛选栏 -->
   <button class="filter-fab" id="fbFilterFab" onclick="toggleFilterDrawer('fb')">筛选</button>
   <div class="filter-backdrop" id="fbFilterBk" onclick="toggleFilterDrawer('fb', 1)"></div>
   <div class="filter-layout">
@@ -2079,6 +2083,16 @@ html { scroll-behavior: smooth; }
     <span class="cmp-chk-group" id="fbCmpYears"></span>
     <label class="inc-partial" title="进行中月份（当前年当前月）数据不完整，默认不计入分析"><input type="checkbox" id="incPartialChkFb" onchange="fbSub.renderAll()"> 包含进行中月份</label>
     <input type="file" id="fbFileInput" accept=".xlsx,.xls" style="display:none" onchange="fbSub.handleFile(event)">
+  </div>
+  <!-- 成本分析专属筛选（V20261008-3 由页面内移到抽屉，字段/联动不变） -->
+  <div class="fb-filter-bar" id="fbCostFilterBar" style="display:none">
+    <label>年份</label><select id="fcYear" onchange="fbSub.renderCost()"></select>
+    <label>对比年份</label><select id="fcCmp" onchange="fbSub.renderCost()"><option value="">不对比</option></select>
+    <label>成本视图</label><select id="fcView" onchange="fbSub.renderCost()">
+      <option value="subject">按科目</option>
+      <option value="group">按大类</option>
+    </select>
+    <label class="inc-partial" title="进行中月份（当前年当前月）数据不完整，默认不计入分析"><input type="checkbox" id="incPartialChkFc"> 包含进行中月份</label>
   </div>
   </div>
   <div class="filter-main">
@@ -2176,15 +2190,7 @@ html { scroll-behavior: smooth; }
 
   <!-- F&B Sub-Page: 成本分析 -->
   <div class="fb-page" id="fbpg-cost">
-    <div class="fb-filter-bar" id="fbCostFilterBar" style="display:none">
-      <label>年份</label><select id="fcYear" onchange="fbSub.renderCost()"></select>
-      <label>对比年份</label><select id="fcCmp" onchange="fbSub.renderCost()"><option value="">不对比</option></select>
-      <label>成本视图</label><select id="fcView" onchange="fbSub.renderCost()">
-        <option value="subject">按科目</option>
-        <option value="group">按大类</option>
-      </select>
-      <label class="inc-partial" title="进行中月份（当前年当前月）数据不完整，默认不计入分析"><input type="checkbox" id="incPartialChkFc"> 包含进行中月份</label>
-    </div>
+    <!-- 成本分析专属筛选条已移入左侧抽屉 #fbCostFilterBar（V20261008-3） -->
     <div class="fb-demo-banner" id="fbCostBanner" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;color:#1b5e20;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.6"></div>
     <div class="kpi-grid" id="fbCostK"></div>
     <div class="chart-grid">
@@ -9511,16 +9517,17 @@ var fbSub = (function() {
     document.querySelectorAll('.fb-page').forEach(function(p) { p.classList.remove('active'); });
     var pg = $('fbpg-' + tab);
     if (pg) pg.classList.add('active');
-    var showFF = !(tab === 'dm' || tab === 'cmp' || tab === 'cost' || tab === 'kitchen');
+    // V20261008-3：餐饮所有筛选条统一放左侧抽屉，按子页显示对应那套
+    var hasFF = !(tab === 'dm' || tab === 'cmp' || tab === 'kitchen');
     var fb = $('fbFilterBar');
-    if (fb) fb.style.display = showFF ? 'flex' : 'none';
-    var fcol = document.getElementById('fbFilterCol');
-    if (fcol) fcol.style.display = showFF ? 'flex' : 'none';
-    var ffab = document.getElementById('fbFilterFab');
-    if (ffab) ffab.style.display = showFF ? 'block' : 'none';
-    if (!showFF) toggleFilterDrawer('fb', 1);
+    if (fb) fb.style.display = (hasFF && tab !== 'cost') ? 'flex' : 'none';
     var cfb = $('fbCostFilterBar');
     if (cfb) cfb.style.display = (tab === 'cost') ? 'flex' : 'none';
+    var fcol = document.getElementById('fbFilterCol');
+    if (fcol) fcol.style.display = hasFF ? 'flex' : 'none';
+    var ffab = document.getElementById('fbFilterFab');
+    if (ffab) ffab.style.display = hasFF ? 'block' : 'none';
+    if (!hasFF) toggleFilterDrawer('fb', 1);
     if (tab === 'cmp') { renderCmp(); return; }
     if (tab === 'cost') { renderCost(); return; }
     if (tab === 'dm') { initCostEntryUI(); return; }
@@ -12307,15 +12314,21 @@ var rmSub = (function() {
     document.querySelectorAll('#tab-rooms .fb-page').forEach(function(p) { p.classList.remove('active'); });
     var pg = $('rmpg-' + tab);
     if (pg) pg.classList.add('active');
-    // 数据管理 / 小商品分析 不需要客房筛选条（各自有独立控件）
-    var showRF = (tab !== 'dm' && tab !== 'sy11');
+    // V20261008-3：所有筛选条统一放左侧抽屉，按子页显示对应那套（数据管理页无筛选）
+    var hasRF = (tab !== 'dm');
     var fb = $('roomFilterBar');
-    if (fb) fb.style.display = showRF ? 'flex' : 'none';
+    if (fb) fb.style.display = (hasRF && tab !== 'sy11') ? 'flex' : 'none';
+    var sf = document.getElementById('sourceFilterBar');
+    if (sf) sf.style.display = (tab === 'sources') ? 'flex' : 'none';
+    var rtf = document.getElementById('rtSourceFilterBar');
+    if (rtf) rtf.style.display = (tab === 'roomtype') ? 'flex' : 'none';
+    var syf = document.getElementById('sy11FilterBar');
+    if (syf) syf.style.display = (tab === 'sy11') ? 'flex' : 'none';
     var fcol = document.getElementById('roomFilterCol');
-    if (fcol) fcol.style.display = showRF ? 'flex' : 'none';
+    if (fcol) fcol.style.display = hasRF ? 'flex' : 'none';
     var ffab = document.getElementById('roomFilterFab');
-    if (ffab) ffab.style.display = showRF ? 'block' : 'none';
-    if (!showRF) toggleFilterDrawer('room', 1);
+    if (ffab) ffab.style.display = hasRF ? 'block' : 'none';
+    if (!hasRF) toggleFilterDrawer('room', 1);
     if (tab === 'dm' && !_init) { init(); _init = true; }
     if (tab === 'dm') search();
     if (tab === 'tgt') { renderRoomTgt(); }
@@ -13065,7 +13078,7 @@ var rmSub = (function() {
 })();
 
 // ============= DRAG & DROP =============
-// 左侧筛选栏吸顶偏移：跟随 sticky header 的实际高度（V20261008-2，纯布局辅助）
+// 左侧筛选栏吸顶偏移：跟随 sticky header 的实际高度（V20261008-3，纯布局辅助）
 (function(){
   function updateFilterTop(){
     var h = document.querySelector('.app-header');
@@ -13074,7 +13087,7 @@ var rmSub = (function() {
   updateFilterTop();
   window.addEventListener('resize', updateFilterTop);
 })();
-// 抽屉式筛选栏开关（V20261008-2）：prefix 'room' | 'fb'；forceClose=1 时只收起
+// 抽屉式筛选栏开关（V20261008-3）：prefix 'room' | 'fb'；forceClose=1 时只收起
 function toggleFilterDrawer(prefix, forceClose){
   var col = document.getElementById(prefix + 'FilterCol');
   var bk = document.getElementById(prefix + 'FilterBk');
