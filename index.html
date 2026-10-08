@@ -6,8 +6,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="build-version" content="V20261001-3">
-<title>酒店经营分析看板 V20261001-3</title>
+<meta name="build-version" content="V20261008-1">
+<title>酒店经营分析看板 V20261008-1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1211,6 +1211,25 @@ body {
   font-size: 12px; background: var(--surface); cursor: pointer; font-family: inherit;
 }
 .fb-filter-bar select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-light); }
+/* ===== 左侧固定筛选栏（试点：客房分析 / 餐饮分析，V20261008-1）===== */
+/* 只改布局与滚动方式：筛选字段/默认值/联动/查询逻辑一律不动 */
+.filter-layout { display: flex; gap: 16px; align-items: flex-start; }
+.filter-side-col {
+  flex: 0 0 208px; width: 208px; min-width: 0;
+  position: sticky; top: var(--filterTop, 72px);
+  max-height: calc(100vh - var(--filterTop, 72px) - 12px);
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+  align-self: flex-start;
+}
+.filter-side-col .fb-filter-bar { flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 0; }
+.filter-side-col .fb-filter-bar select { width: 100%; }
+.filter-side-col .inc-partial { margin-left: 0; }
+.filter-main { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 900px) {
+  .filter-layout { flex-direction: column; }
+  .filter-side-col { position: static; width: auto; flex: none; max-height: none; }
+}
 /* 客源分析专属筛选条 */
 .source-filter-bar {
   background: var(--surface); padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1568,7 +1587,7 @@ html { scroll-behavior: smooth; }
       <h1>📊 盛世金樽大酒店 · 经营分析看板</h1>
       <span class="badge" id="dataRangeBadge">加载中...</span>
       <span class="cloud-sync" id="cloudSyncStatus" style="display:none;">☁️</span>
-      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261001-3</span>
+      <span class="build-tag" id="buildTag" title="构建版本（与缓存相关，请用 Ctrl+F5 刷新）">V20261008-1</span>
     </div>
     <div class="header-actions">
     </div>
@@ -1693,13 +1712,17 @@ html { scroll-behavior: smooth; }
     <button data-rmtab="sy11" onclick="rmSub.switchSub('sy11')">🛒 小商品分析</button>
     <button data-rmtab="dm" onclick="rmSub.switchSub('dm')">💾 数据管理</button>
   </div>
-  <!-- Room Filter Bar (moved from global, styled like 餐饮) -->
+  <!-- Room Filter Bar (moved from global, styled like 餐饮) — V20261008-1 改为左侧固定筛选栏 -->
+  <div class="filter-layout">
+  <div class="filter-side-col" id="roomFilterCol">
   <div class="fb-filter-bar" id="roomFilterBar">
     <label>年份</label><select id="filterYear" onchange="onFilterChange()"></select>
     <label>月份</label><span class="cmp-chk-group" id="rmMF"></span>
     <span class="cmp-chk-group" id="roomCmpYears"></span>
     <label class="inc-partial"><input type="checkbox" id="incPartialChk" onchange="onFilterChange()"> 包含进行中月份</label>
   </div>
+  </div>
+  <div class="filter-main">
   <!-- Room Sub-Page: 概览 -->
   <div class="fb-page active" id="rmpg-overview">
     <div id="roomErrBanner"></div>
@@ -2015,6 +2038,8 @@ html { scroll-behavior: smooth; }
     <div class="data-table-wrap"><div class="chart-title">酒店客房目标明细</div><div id="rmTgtTbl1"></div></div>
     <div class="data-table-wrap"><div class="chart-title">部门目标明细</div><div id="rmTgtTbl2"></div></div>
   </div>
+  </div>
+  </div>
 </div>
 
 <!-- TAB: F&B -->
@@ -2032,7 +2057,9 @@ html { scroll-behavior: smooth; }
     <button data-fbtab="dm" onclick="fbSub.switchSub('dm')">⚙️ 数据管理</button>
   </div>
 
-  <!-- F&B Filter Bar -->
+  <!-- F&B Filter Bar — V20261008-1 改为左侧固定筛选栏 -->
+  <div class="filter-layout">
+  <div class="filter-side-col" id="fbFilterCol">
   <div class="fb-filter-bar" id="fbFilterBar">
     <label>年份</label><select id="fbYF" onchange="fbSub.renderAll()"></select>
     <label>月份</label><span class="cmp-chk-group" id="fbMF"></span>
@@ -2040,6 +2067,8 @@ html { scroll-behavior: smooth; }
     <label class="inc-partial" title="进行中月份（当前年当前月）数据不完整，默认不计入分析"><input type="checkbox" id="incPartialChkFb" onchange="fbSub.renderAll()"> 包含进行中月份</label>
     <input type="file" id="fbFileInput" accept=".xlsx,.xls" style="display:none" onchange="fbSub.handleFile(event)">
   </div>
+  </div>
+  <div class="filter-main">
 
   <!-- F&B Sub-Page: 营业收入 -->
   <div class="fb-page active" id="fbpg-rev">
@@ -2271,6 +2300,8 @@ html { scroll-behavior: smooth; }
       </div>
       <div id="kcImportResult" style="display:none" class="fb-import-result"></div>
     </div>
+  </div>
+  </div>
   </div>
 </div>
 
@@ -9469,6 +9500,8 @@ var fbSub = (function() {
     if (pg) pg.classList.add('active');
     var fb = $('fbFilterBar');
     if (fb) fb.style.display = (tab === 'dm' || tab === 'cmp' || tab === 'cost' || tab === 'kitchen') ? 'none' : 'flex';
+    var fcol = document.getElementById('fbFilterCol');
+    if (fcol) fcol.style.display = (tab === 'dm' || tab === 'cmp' || tab === 'cost' || tab === 'kitchen') ? 'none' : 'flex';
     var cfb = $('fbCostFilterBar');
     if (cfb) cfb.style.display = (tab === 'cost') ? 'flex' : 'none';
     if (tab === 'cmp') { renderCmp(); return; }
@@ -12260,6 +12293,8 @@ var rmSub = (function() {
     // 数据管理 / 小商品分析 不需要客房筛选条（各自有独立控件）
     var fb = $('roomFilterBar');
     if (fb) fb.style.display = (tab === 'dm' || tab === 'sy11') ? 'none' : 'flex';
+    var fcol = document.getElementById('roomFilterCol');
+    if (fcol) fcol.style.display = (tab === 'dm' || tab === 'sy11') ? 'none' : 'flex';
     if (tab === 'dm' && !_init) { init(); _init = true; }
     if (tab === 'dm') search();
     if (tab === 'tgt') { renderRoomTgt(); }
@@ -13009,6 +13044,15 @@ var rmSub = (function() {
 })();
 
 // ============= DRAG & DROP =============
+// 左侧筛选栏吸顶偏移：跟随 sticky header 的实际高度（V20261008-1，纯布局辅助）
+(function(){
+  function updateFilterTop(){
+    var h = document.querySelector('.app-header');
+    document.documentElement.style.setProperty('--filterTop', ((h ? h.offsetHeight : 60) + 8) + 'px');
+  }
+  updateFilterTop();
+  window.addEventListener('resize', updateFilterTop);
+})();
 ['rmUploadZone', 'uploadRoom', 'uploadFB', 'modalUploadRoom', 'modalUploadFB', 'vendingUploadZone'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
